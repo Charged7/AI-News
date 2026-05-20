@@ -1,6 +1,6 @@
 # AI Telegram News Bot
 
-Automated Telegram news feed that reads RSS sources, summarizes each article, and sends one Telegram message per news item. The first source is The Verge, but RSS handling is multi-source ready.
+Automated Telegram news feed that reads RSS sources, summarizes each article, and sends one Telegram message per news item. The current sources are The Verge and Engadget, and RSS handling is multi-source ready.
 
 ## What It Does
 
@@ -106,6 +106,7 @@ Edit `RSS_SOURCES` in `config.py`:
 ```python
 RSS_SOURCES = [
     RSSSource(name="The Verge", url="https://www.theverge.com/rss/index.xml"),
+    RSSSource(name="Engadget", url="https://www.engadget.com/rss.xml"),
     RSSSource(name="Another Source", url="https://example.com/rss.xml"),
 ]
 ```

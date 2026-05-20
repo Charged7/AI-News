@@ -19,6 +19,7 @@ class RSSSource:
 
 RSS_SOURCES: list[RSSSource] = [
     RSSSource(name="The Verge", url="https://www.theverge.com/rss/index.xml"),
+    RSSSource(name="Engadget", url="https://www.engadget.com/rss.xml"),
 ]
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")

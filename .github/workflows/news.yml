@@ -27,9 +27,11 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          OPENAI_REQUEST_DELAY_SECONDS: ${{ secrets.OPENAI_REQUEST_DELAY_SECONDS }}
+          OPENAI_RATE_LIMIT_RETRIES: ${{ secrets.OPENAI_RATE_LIMIT_RETRIES }}
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            python main.py --scheduled
+            python main.py --scheduled --require-ai
           else
-            python main.py
+            python main.py --require-ai
           fi
