@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: "0 6 * * *"
     - cron: "0 7 * * *"
+    - cron: "0 18 * * *"
+    - cron: "0 19 * * *"
   workflow_dispatch:
 
 jobs:
@@ -26,9 +28,11 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-          OPENAI_REQUEST_DELAY_SECONDS: ${{ secrets.OPENAI_REQUEST_DELAY_SECONDS }}
-          OPENAI_RATE_LIMIT_RETRIES: ${{ secrets.OPENAI_RATE_LIMIT_RETRIES }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          OPENAI_REQUEST_DELAY_SECONDS: ${{ vars.OPENAI_REQUEST_DELAY_SECONDS }}
+          OPENAI_RATE_LIMIT_RETRIES: ${{ vars.OPENAI_RATE_LIMIT_RETRIES }}
+          NEWS_LOOKBACK_HOURS: ${{ vars.NEWS_LOOKBACK_HOURS }}
+          SCHEDULE_HOURS: ${{ vars.SCHEDULE_HOURS }}
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
             python main.py --scheduled --require-ai
