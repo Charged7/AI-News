@@ -1,6 +1,36 @@
 {
   "items": [
     {
+      "link": "https://www.theverge.com/reviews/691319/best-switch-2-cases",
+      "title": "I tested several cases for the Switch 2 and these are the best",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T14:13:06.438114+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/podcast/934869/elon-musk-sam-altman-openai-suit-loss-pointless",
+      "title": "Musk v. Altman: Much ado about nothing",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T14:13:06.438114+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2178441/new-york-city-mayor-zohran-mamdani-is-launching-a-twitch-show/",
+      "title": "New York City Mayor Zohran Mamdani is launching a Twitch show",
+      "source": "Engadget",
+      "sent_at": "2026-05-21T14:13:06.438114+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2177545/airbnb-expands-into-hotel-bookings-groceries/",
+      "title": "Airbnb expands into hotel bookings and even grocery deliveries",
+      "source": "Engadget",
+      "sent_at": "2026-05-21T14:13:06.438114+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2177708/cuneflows-e-paper-writing-tablet-uses-ai-to-record-and-transcribe-meetings/",
+      "title": "Cuneflow's e-paper writing tablet uses AI to record and transcribe meetings",
+      "source": "Engadget",
+      "sent_at": "2026-05-21T14:13:06.438114+00:00"
+    },
+    {
       "link": "https://www.theverge.com/science/935229/spacex-anthropic-ipo-ai-capacity-deal-colossus",
       "title": "Anthropic is paying $15 billion a year for access to Elon Musk’s data centers",
       "source": "The Verge",
