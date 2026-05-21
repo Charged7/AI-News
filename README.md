@@ -75,7 +75,7 @@ Send messages for real:
 python main.py
 ```
 
-Run in scheduled mode:
+Run in scheduled mode locally:
 
 ```bash
 python main.py --scheduled
@@ -87,15 +87,27 @@ Add these repository secrets:
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
-- `OPENAI_API_KEY` optional
-- `OPENAI_MODEL` optional
+- `OPENAI_API_KEY`
 
-The workflow uses two UTC cron entries:
+Add these repository variables:
+
+- `OPENAI_MODEL`
+- `OPENAI_REQUEST_DELAY_SECONDS`
+- `OPENAI_RATE_LIMIT_RETRIES`
+- `NEWS_LOOKBACK_HOURS`
+
+The workflow uses a simple UTC schedule:
 
 - `0 6 * * *`
-- `0 7 * * *`
+- `0 18 * * *`
 
-`main.py --scheduled` checks `Europe/Kyiv` and sends only when the local hour is `09:00`, so the bot handles daylight saving time.
+In Kyiv summer time, that is 09:00 and 21:00. In Kyiv winter time, it runs one hour earlier.
+
+For a 12-hour feed cadence, set this GitHub variable:
+
+```text
+NEWS_LOOKBACK_HOURS=12
+```
 
 Manual `workflow_dispatch` runs send immediately.
 

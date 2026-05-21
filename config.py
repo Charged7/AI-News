@@ -27,9 +27,13 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-OPENAI_REQUEST_DELAY_SECONDS = float(os.getenv("OPENAI_REQUEST_DELAY_SECONDS", "21"))
+OPENAI_REQUEST_DELAY_SECONDS = float(os.getenv("OPENAI_REQUEST_DELAY_SECONDS", "1"))
 OPENAI_RATE_LIMIT_RETRIES = int(os.getenv("OPENAI_RATE_LIMIT_RETRIES", "3"))
 
-NEWS_LOOKBACK_HOURS = int(os.getenv("NEWS_LOOKBACK_HOURS", "24"))
+NEWS_LOOKBACK_HOURS = int(os.getenv("NEWS_LOOKBACK_HOURS", "12"))
 SCHEDULE_TIMEZONE = os.getenv("SCHEDULE_TIMEZONE", "Europe/Kyiv")
-SCHEDULE_HOUR = int(os.getenv("SCHEDULE_HOUR", "9"))
+SCHEDULE_HOURS = [
+    int(hour.strip())
+    for hour in os.getenv("SCHEDULE_HOURS", "9,21").split(",")
+    if hour.strip()
+]

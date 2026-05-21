@@ -7,7 +7,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from ai import AISummaryError, summarize_news_items
-from config import NEWS_LOOKBACK_HOURS, RSS_SOURCES, SCHEDULE_HOUR, SCHEDULE_TIMEZONE
+from config import NEWS_LOOKBACK_HOURS, RSS_SOURCES, SCHEDULE_HOURS, SCHEDULE_TIMEZONE
 from rss import NewsItem, fetch_recent_news
 from telegram import TelegramClient, build_intro_message, build_news_message, should_use_photo
 
@@ -69,7 +69,7 @@ def main() -> int:
 def should_run_scheduled(now: datetime | None = None) -> bool:
     timezone = ZoneInfo(SCHEDULE_TIMEZONE)
     local_now = (now or datetime.now(timezone)).astimezone(timezone)
-    return local_now.hour == SCHEDULE_HOUR
+    return local_now.hour in SCHEDULE_HOURS
 
 
 def print_dry_run(items: list[NewsItem], summaries: dict[str, str]) -> None:
