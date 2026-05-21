@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from ai import AISummaryError, summarize_news_items
+from ai import AISummaryError, AiNewsText, summarize_news_items
 from config import NEWS_LOOKBACK_HOURS, RSS_SOURCES, SCHEDULE_HOURS, SCHEDULE_TIMEZONE, SENT_NEWS_PATH, SENT_NEWS_RETENTION_DAYS
 from rss import NewsItem, fetch_recent_news
 from sent_news import SentNewsStore
@@ -86,7 +86,7 @@ def should_run_scheduled(now: datetime | None = None) -> bool:
     return local_now.hour in SCHEDULE_HOURS
 
 
-def print_dry_run(items: list[NewsItem], summaries: dict[str, str]) -> None:
+def print_dry_run(items: list[NewsItem], summaries: dict[str, AiNewsText]) -> None:
     print(build_intro_message(items))
     print()
     for index, item in enumerate(items, start=1):

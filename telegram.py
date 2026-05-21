@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from html import escape
 from dataclasses import dataclass
 from datetime import date
 from typing import Iterable
@@ -28,7 +29,14 @@ class TelegramClient:
             raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required for sending.")
 
     def send_message(self, text: str) -> None:
-        self._post("sendMessage", {"chat_id": self.settings.chat_id, "text": _truncate(text, TELEGRAM_MESSAGE_LIMIT)})
+        self._post(
+            "sendMessage",
+            {
+                "chat_id": self.settings.chat_id,
+                "text": _truncate(text, TELEGRAM_MESSAGE_LIMIT),
+                "parse_mode": "HTML",
+            },
+        )
 
     def send_photo(self, photo_url: str, caption: str) -> None:
         self._post(
@@ -37,6 +45,7 @@ class TelegramClient:
                 "chat_id": self.settings.chat_id,
                 "photo": photo_url,
                 "caption": _truncate(caption, TELEGRAM_CAPTION_LIMIT),
+                "parse_mode": "HTML",
             },
         )
 
@@ -65,16 +74,18 @@ def build_intro_message(items: Iterable[NewsItem]) -> str:
     lines = ["🌍 Ранкова стрічка новин"]
     if date_text:
         lines.append(date_text)
-    lines.append(f"{count} {noun} за останні 12 годин з {source_text}.")
+    lines.append(f"{count} {noun} за останню годину з {source_text}.")
     return "\n".join(lines)
 
 
-def build_news_message(index: int, item: NewsItem, summary: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> str:
-    prefix = f"📰 {index}. {item.title} ({item.source})\n"
-    suffix = f"\n\n🔗 {item.link}"
+def build_news_message(index: int, item: NewsItem, summary: object, limit: int = TELEGRAM_MESSAGE_LIMIT) -> str:
+    title = getattr(summary, "title", item.title)
+    summary_text = getattr(summary, "summary", str(summary))
+    prefix = f"📰 {index}. <b>{escape(str(title))}</b> ({escape(item.source)})\n\n"
+    suffix = f"\n\n🔗 {escape(item.link)}"
     available_summary_length = max(40, limit - len(prefix) - len(suffix))
-    summary = _truncate(summary.strip(), available_summary_length)
-    return _truncate(f"{prefix}{summary}{suffix}", limit)
+    summary_text = _truncate(str(summary_text).strip(), available_summary_length)
+    return _truncate(f"{prefix}{escape(summary_text)}{suffix}", limit)
 
 
 def _truncate(text: str, limit: int) -> str:
