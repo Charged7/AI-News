@@ -64,11 +64,7 @@ Send messages for real:
 python main.py
 ```
 
-Run in scheduled mode locally:
-
-```bash
-python main.py --scheduled
-```
+Scheduling is controlled by `.github/workflows/news.yml`; the Python script itself sends whenever it is executed.
 
 ## GitHub Actions
 
