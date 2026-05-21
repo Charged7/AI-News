@@ -6,7 +6,7 @@ import time
 from typing import Iterable
 
 from config import OPENAI_API_KEY, OPENAI_MODEL, OPENAI_RATE_LIMIT_RETRIES, OPENAI_REQUEST_DELAY_SECONDS
-from rss import NewsItem, clean_text
+from rss import NewsItem
 
 logger = logging.getLogger(__name__)
 
@@ -19,22 +19,16 @@ def summarize_news_items(
     items: Iterable[NewsItem],
     api_key: str = OPENAI_API_KEY,
     model: str = OPENAI_MODEL,
-    use_ai: bool = True,
-    require_ai: bool = False,
     request_delay_seconds: float = OPENAI_REQUEST_DELAY_SECONDS,
     rate_limit_retries: int = OPENAI_RATE_LIMIT_RETRIES,
 ) -> dict[str, str]:
+    if not api_key:
+        raise AISummaryError("OPENAI_API_KEY is required for AI summaries.")
+
     summaries: dict[str, str] = {}
-    ai_disabled = not use_ai or not api_key
     last_ai_request_at: float | None = None
 
     for item in items:
-        if ai_disabled:
-            if require_ai:
-                raise AISummaryError("AI summaries are required, but OPENAI_API_KEY is missing or AI is disabled.")
-            summaries[item.link] = fallback_summary(item.description or item.title)
-            continue
-
         try:
             if last_ai_request_at is not None and request_delay_seconds > 0:
                 elapsed = time.monotonic() - last_ai_request_at
@@ -49,12 +43,7 @@ def summarize_news_items(
             last_ai_request_at = time.monotonic()
         except Exception as exc:  # pragma: no cover - external API resilience
             logger.warning("AI summary failed for %s: %s", item.link, exc)
-            if require_ai:
-                raise AISummaryError(f"AI summary failed for {item.link}") from exc
-            if _is_quota_error(exc):
-                logger.warning("OpenAI quota is unavailable; using fallback summaries for the rest of this run.")
-                ai_disabled = True
-            summaries[item.link] = fallback_summary(item.description or item.title)
+            raise AISummaryError(f"AI summary failed for {item.link}") from exc
 
     return summaries
 
@@ -65,30 +54,13 @@ def summarize_news_item(
     model: str = OPENAI_MODEL,
 ) -> str:
     if not api_key:
-        return fallback_summary(item.description or item.title)
+        raise AISummaryError("OPENAI_API_KEY is required for AI summaries.")
 
     try:
         return _summarize_with_openai(item, api_key=api_key, model=model)
     except Exception as exc:  # pragma: no cover - external API resilience
         logger.warning("AI summary failed for %s: %s", item.link, exc)
-        return fallback_summary(item.description or item.title)
-
-
-def fallback_summary(text: str, max_chars: int = 280) -> str:
-    text = clean_text(text)
-    if not text:
-        return "Короткий опис недоступний."
-
-    sentences = re.split(r"(?<=[.!?])\s+", text)
-    summary = " ".join(sentence for sentence in sentences[:2] if sentence).strip()
-    if not summary:
-        summary = text
-
-    if len(summary) <= max_chars:
-        return summary
-
-    trimmed = summary[: max_chars - 1].rsplit(" ", 1)[0].strip()
-    return f"{trimmed}..." if trimmed else f"{summary[: max_chars - 3]}..."
+        raise AISummaryError(f"AI summary failed for {item.link}") from exc
 
 
 def _summarize_with_openai(item: NewsItem, api_key: str, model: str) -> str:
@@ -119,7 +91,9 @@ def _summarize_with_openai(item: NewsItem, api_key: str, model: str) -> str:
         ],
     )
     summary = (response.choices[0].message.content or "").strip()
-    return summary or fallback_summary(item.description or item.title)
+    if not summary:
+        raise AISummaryError(f"OpenAI returned an empty summary for {item.link}.")
+    return summary
 
 
 def _summarize_with_openai_with_rate_limit_retry(
@@ -139,11 +113,6 @@ def _summarize_with_openai_with_rate_limit_retry(
             time.sleep(wait_seconds)
 
     raise AISummaryError("Unreachable rate-limit retry state.")
-
-
-def _is_quota_error(exc: Exception) -> bool:
-    text = str(exc).lower()
-    return "insufficient_quota" in text or "exceeded your current quota" in text
 
 
 def _is_rate_limit_error(exc: Exception) -> bool:

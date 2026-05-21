@@ -30,7 +30,9 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 OPENAI_REQUEST_DELAY_SECONDS = float(os.getenv("OPENAI_REQUEST_DELAY_SECONDS", "1"))
 OPENAI_RATE_LIMIT_RETRIES = int(os.getenv("OPENAI_RATE_LIMIT_RETRIES", "3"))
 
-NEWS_LOOKBACK_HOURS = int(os.getenv("NEWS_LOOKBACK_HOURS", "12"))
+NEWS_LOOKBACK_HOURS = int(os.getenv("NEWS_LOOKBACK_HOURS", "6"))
+SENT_NEWS_PATH = os.getenv("SENT_NEWS_PATH", "data/sent_news.json")
+SENT_NEWS_RETENTION_DAYS = int(os.getenv("SENT_NEWS_RETENTION_DAYS", "30"))
 SCHEDULE_TIMEZONE = os.getenv("SCHEDULE_TIMEZONE", "Europe/Kyiv")
 SCHEDULE_HOURS = [
     int(hour.strip())

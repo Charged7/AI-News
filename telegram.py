@@ -41,14 +41,10 @@ class TelegramClient:
         )
 
     def send_news_item(self, index: int, item: NewsItem, summary: str) -> None:
-        if should_use_photo(item):
-            try:
-                self.send_photo(item.image or "", build_news_message(index, item, summary, limit=TELEGRAM_CAPTION_LIMIT))
-                return
-            except Exception as exc:
-                logger.warning("sendPhoto failed for %s, falling back to sendMessage: %s", item.link, exc)
+        if not item.image:
+            raise ValueError(f"Image URL is required for news item: {item.link}")
 
-        self.send_message(build_news_message(index, item, summary, limit=TELEGRAM_MESSAGE_LIMIT))
+        self.send_photo(item.image, build_news_message(index, item, summary, limit=TELEGRAM_CAPTION_LIMIT))
 
     def _post(self, method: str, payload: dict[str, str]) -> None:
         import requests
@@ -69,7 +65,7 @@ def build_intro_message(items: Iterable[NewsItem]) -> str:
     lines = ["🌍 Ранкова стрічка новин"]
     if date_text:
         lines.append(date_text)
-    lines.append(f"{count} {noun} за останні 24 години з {source_text}.")
+    lines.append(f"{count} {noun} за останні 12 годин з {source_text}.")
     return "\n".join(lines)
 
 
@@ -79,10 +75,6 @@ def build_news_message(index: int, item: NewsItem, summary: str, limit: int = TE
     available_summary_length = max(40, limit - len(prefix) - len(suffix))
     summary = _truncate(summary.strip(), available_summary_length)
     return _truncate(f"{prefix}{summary}{suffix}", limit)
-
-
-def should_use_photo(item: NewsItem) -> bool:
-    return bool(item.image)
 
 
 def _truncate(text: str, limit: int) -> str:
