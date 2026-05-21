@@ -1,3 +1,82 @@
 {
-  "items": []
+  "items": [
+    {
+      "link": "https://www.theverge.com/science/935229/spacex-anthropic-ipo-ai-capacity-deal-colossus",
+      "title": "Anthropic is paying $15 billion a year for access to Elon Musk’s data centers",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/entertainment/935218/the-boroughs-review-netflix",
+      "title": "Netflix’s next great sci-fi show is set in a retirement community",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/tech/935202/flipper-devices-one-zero-wireless-multi-tool-linux-open-source-computer",
+      "title": "The new Flipper One is a pocket-sized Linux computer",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/tech/935196/i-review-robot-vacuums-for-a-living-ask-me-anything",
+      "title": "I review robot vacuums for a living, ask me anything!",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/ai-artificial-intelligence/935056/google-vibe-coding-first-android-app-gemini-ai-studio",
+      "title": "I can’t believe how fast Google vibe coded my first Android app",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2178197/google-io-2026-opinion-are-you-really-going-to-talk-to-gemini-like-that/",
+      "title": "Are you really going to talk to Gemini like that?",
+      "source": "Engadget",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2178415/us-is-taking-equity-stakes-in-ibm-and-other-quantum-computing-companies/",
+      "title": "US is taking equity stakes in IBM and other quantum computing companies",
+      "source": "Engadget",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/tech/935191/zohran-mamdani-twitch-talk-to-the-people",
+      "title": "NYC Mayor Zohran Mamdani is launching a Twitch series",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2178393/tesla-self-driving-china/",
+      "title": "Tesla brings Full Self-Driving to China",
+      "source": "Engadget",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2178378/meta-reportedly-lays-off-8000-employees/",
+      "title": "Meta has reportedly laid off 8,000 employees",
+      "source": "Engadget",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2178368/meta-snap-roblox-ofcom-uk-child-safety-pledge/",
+      "title": "Meta, Snap and Roblox commit to tougher anti-grooming measures in UK",
+      "source": "Engadget",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/tech/931532/bambu-agpl-pawel-jarczak-open-source-threat-dmca-github",
+      "title": "‘Fuck you, Bambu’: How one private message could change the face of 3D printing",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/tech/935163/meta-layoffs-ai-investment-offset-memo",
+      "title": "Meta lays off thousands of employees to offset AI investments",
+      "source": "The Verge",
+      "sent_at": "2026-05-21T13:37:51.627170+00:00"
+    }
+  ]
 }
