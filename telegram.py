@@ -64,7 +64,7 @@ class TelegramClient:
 def build_news_message(index: int, item: NewsItem, summary: object, limit: int = TELEGRAM_MESSAGE_LIMIT) -> str:
     title = getattr(summary, "title", item.title)
     summary_text = getattr(summary, "summary", str(summary))
-    prefix = f"📰 {index}. <b>{escape(str(title))}</b> ({escape(item.source)})\n\n"
+    prefix = f"📰 <b>{escape(str(title))}</b> ({escape(item.source)})\n\n"
     suffix = f"\n\n🔗 {escape(item.link)}"
     available_summary_length = max(40, limit - len(prefix) - len(suffix))
     summary_text = _truncate(str(summary_text).strip(), available_summary_length)
