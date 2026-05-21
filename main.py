@@ -10,7 +10,7 @@ from ai import AISummaryError, AiNewsText, summarize_news_items
 from config import NEWS_LOOKBACK_HOURS, RSS_SOURCES, SCHEDULE_HOURS, SCHEDULE_TIMEZONE, SENT_NEWS_PATH, SENT_NEWS_RETENTION_DAYS
 from rss import NewsItem, fetch_recent_news
 from sent_news import SentNewsStore
-from telegram import TelegramClient, build_intro_message, build_news_message
+from telegram import TelegramClient, build_news_message
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,6 @@ def main() -> int:
     sent_items: list[NewsItem] = []
     try:
         client = TelegramClient()
-        client.send_message(build_intro_message(items))
         for index, item in enumerate(items, start=1):
             client.send_news_item(index, item, summaries[item.link])
             sent_items.append(item)
@@ -87,8 +86,6 @@ def should_run_scheduled(now: datetime | None = None) -> bool:
 
 
 def print_dry_run(items: list[NewsItem], summaries: dict[str, AiNewsText]) -> None:
-    print(build_intro_message(items))
-    print()
     for index, item in enumerate(items, start=1):
         if not item.image:
             raise ValueError(f"Image URL is required for news item: {item.link}")
