@@ -1,6 +1,54 @@
 {
   "items": [
     {
+      "link": "https://techcrunch.com/2026/05/22/trump-mobile-confirms-it-exposed-customers-personal-data-including-phone-numbers-and-home-addresses/",
+      "title": "Trump Mobile confirms it exposed customers’ personal data, including phone numbers and home addresses",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-22T14:46:15.127373+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/tech/936073/ai-writing-granta-commonwealth-prize",
+      "title": "The literary world isn’t prepared for AI",
+      "source": "The Verge",
+      "sent_at": "2026-05-22T14:46:15.127373+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/22/happy-hour-591/",
+      "title": "WWDC invites, iOS 27 accessibility features, new Siri will be a ‘beta’",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-22T14:46:15.127373+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/2026/05/22/meta-quietly-launches-a-new-reddit-like-app-called-forum/",
+      "title": "Meta quietly launches a new Reddit-like app called Forum",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-22T14:46:15.127373+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/ai-artificial-intelligence/936072/spotify-umg-ai-music-remix-cover-superfan",
+      "title": "Why would you disrespect your favorite artist with an AI remix?",
+      "source": "The Verge",
+      "sent_at": "2026-05-22T14:46:15.127373+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/22/ios-26-5-added-new-features-to-three-popular-iphone-apps/",
+      "title": "iOS 26.5 added new features to three popular iPhone apps",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-22T14:46:15.127373+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/2026/05/22/smart-ring-maker-oura-files-to-go-public/",
+      "title": "Smart ring maker Oura files to go public",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-22T14:46:15.127373+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/transportation/936078/tesla-model-y-missing-sticker-recall",
+      "title": "Tesla recalls thousands of Model Ys at risk of… missing a sticker",
+      "source": "The Verge",
+      "sent_at": "2026-05-22T14:46:15.127373+00:00"
+    },
+    {
       "link": "https://www.theverge.com/podcast/936037/google-io-2026-search-agents-vergecast",
       "title": "The post-search Google era begins",
       "source": "The Verge",
