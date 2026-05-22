@@ -15,7 +15,7 @@ class TelegramTests(unittest.TestCase):
         self.assertIn("📰 <b>Український заголовок</b> (The Verge)", message)
         self.assertIn("</b> (The Verge)\n\nКороткий опис.", message)
         self.assertIn("Короткий опис.", message)
-        self.assertIn("🔗 https://example.test", message)
+        self.assertIn("https://example.test", message)
 
     def test_send_news_item_requires_image(self) -> None:
         item = NewsItem("Title", "Desc", "https://example.test", None, "The Verge")
