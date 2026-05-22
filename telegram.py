@@ -47,10 +47,11 @@ class TelegramClient:
         )
 
     def send_news_item(self, index: int, item: NewsItem, summary: object) -> None:
-        if not item.image:
-            raise ValueError(f"Image URL is required for news item: {item.link}")
+        if item.image:
+            self.send_photo(item.image, build_news_message(index, item, summary, limit=TELEGRAM_CAPTION_LIMIT))
+            return
 
-        self.send_photo(item.image, build_news_message(index, item, summary, limit=TELEGRAM_CAPTION_LIMIT))
+        self.send_message(build_news_message(index, item, summary, limit=TELEGRAM_MESSAGE_LIMIT))
 
     def _post(self, method: str, payload: dict[str, str]) -> None:
         import requests
