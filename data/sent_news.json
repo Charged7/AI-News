@@ -1,6 +1,24 @@
 {
   "items": [
     {
+      "link": "https://techcrunch.com/2026/05/22/ai-is-being-used-to-resurrect-the-voices-of-dead-pilots/",
+      "title": "AI is being used to resurrect the voices of dead pilots",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-22T23:50:57.736890+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/22/google-defends-its-safari-deal-with-apple-in-antitrust-ruling-appeal/",
+      "title": "Google defends its Safari deal with Apple in antitrust ruling appeal",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-22T23:50:57.736890+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/2026/05/22/spacex-launches-starship-v3-for-the-first-time-but-loses-booster-on-return/",
+      "title": "SpaceX launches Starship V3 for the first time, but loses booster on return",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-22T23:50:57.736890+00:00"
+    },
+    {
       "link": "https://9to5google.com/2026/05/22/gemini-mac-spark-control-summer/",
       "title": "Gemini app for Mac adding ‘Spark’ agent and voice control this summer",
       "source": "9to5Mac",
