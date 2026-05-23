@@ -1,6 +1,90 @@
 {
   "items": [
     {
+      "link": "https://9to5mac.com/2026/05/23/belkin-5000mah-magsafe-slim-battery-bank-hands-on-kickstand/",
+      "title": "Hands-on: Belkin’s new 5K MagSafe battery bank offers a kickstand in a slim design",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/entertainment/936278/coffee-talk-tokyo-review-switch-xbox-ps5-steam",
+      "title": "Hanging out in my favorite virtual coffee shop in Tokyo",
+      "source": "The Verge",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/23/apple-work-why-the-clickfix-campaign-means-it-is-time-to-kill-the-90-day-update-deferral/",
+      "title": "Apple @ Work: Why the ClickFix campaign means it is time to kill the 90 day update deferral",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/2026/05/23/elon-musk-has-given-up-on-solar-power-on-earth/",
+      "title": "Elon Musk has given up on solar power (on Earth)",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2180028/anthropic-claude-mythos-preview-project-glasswing-update/",
+      "title": "Anthropic says Mythos has already found more than 10,000 vulnerabilities",
+      "source": "Engadget",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://appleinsider.com/articles/26/05/23/fcc-filing-confirms-more-apple-headphones-on-the-way?utm_source=rss",
+      "title": "FCC filing confirms more Apple headphones on the way",
+      "source": "AppleInsider News",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/2026/05/22/you-can-no-longer-google-the-word-disregard/",
+      "title": "You can no longer Google the word ‘disregard’",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/22/watchos-27s-rumored-new-apple-watch-face-has-me-very-intrigued/",
+      "title": "watchOS 27’s rumored new Apple Watch face has me very intrigued",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/22/how-to-watch-the-f1-canadian-grand-prix/",
+      "title": "How to watch the F1 Canadian Grand Prix",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/22/how-to-stop-menu-bar-items-being-hidden-behind-the-macbook-pro-notch/",
+      "title": "How to stop menu bar items being hidden behind the MacBook Pro notch",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/2026/05/22/we-tried-googles-ai-glasses-and-theyre-almost-there/",
+      "title": "We tried Google’s AI glasses and they’re almost there",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/22/deals-airpods-pro-3-m5-macbook-air/",
+      "title": "Deals: AirPods Pro 3 Memorial Day deal back at $199, M5 MacBook Air Amazon low $199 off, iPad Air $400 off, Series 11, more",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/22/apple-tvs-new-matthew-mcconaughey-comedy-series-coming-this-fall/",
+      "title": "Apple TV’s new Matthew McConaughey comedy series coming this fall",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/video/spacex-files-to-go-public-and-the-math-requires-a-little-faith/",
+      "title": "SpaceX files to go public, and the math requires a little faith",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-23T14:00:19.004243+00:00"
+    },
+    {
       "link": "https://www.theverge.com/tech/936395/vivaldi-8-review-mandalorian-installer",
       "title": "I have a new go-to browser",
       "source": "The Verge",
