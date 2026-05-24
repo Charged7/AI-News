@@ -4,11 +4,11 @@ import argparse
 import logging
 import sys
 
-from ai import AISummaryError, AiNewsText, summarize_news_items
+from ai import AISummaryError, summarize_news_digest
 from config import NEWS_LOOKBACK_HOURS, RSS_SOURCES, SENT_NEWS_PATH, SENT_NEWS_RETENTION_DAYS
-from rss import NewsItem, fetch_recent_news
+from rss import fetch_recent_news
 from sent_news import SentNewsStore
-from telegram import TelegramClient, build_news_message
+from telegram import TelegramClient, build_digest_message
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +22,7 @@ def configure_output() -> None:
 def main() -> int:
     configure_output()
 
-    parser = argparse.ArgumentParser(description="Send a daily Telegram RSS news feed.")
-    parser.add_argument("--dry-run", action="store_true", help="Print messages without calling Telegram API.")
+    parser = argparse.ArgumentParser(description="Send an AI-generated Telegram news digest.")
     parser.add_argument("--lookback-hours", type=int, default=NEWS_LOOKBACK_HOURS)
     args = parser.parse_args()
 
@@ -41,44 +40,22 @@ def main() -> int:
         logger.info("No new news items to send.")
         return 0
 
+    client = TelegramClient()
     try:
-        summaries = summarize_news_items(items)
+        digest = summarize_news_digest(items)
+        client.send_message(build_digest_message(digest.digest))
     except AISummaryError:
-        logger.exception("AI summary generation failed.")
+        logger.exception("AI digest generation failed.")
         return 1
-
-    if args.dry_run:
-        print_dry_run(items, summaries)
-        return 0
-
-    sent_items: list[NewsItem] = []
-    try:
-        client = TelegramClient()
-        for index, item in enumerate(items, start=1):
-            client.send_news_item(index, item, summaries[item.link])
-            sent_items.append(item)
     except Exception:
-        if sent_items:
-            sent_store.mark_sent(sent_items)
-            sent_store.prune()
-            sent_store.save()
         logger.exception("Telegram sending failed.")
         return 1
 
     sent_store.mark_sent(items)
     sent_store.prune()
     sent_store.save()
-    logger.info("Sent %s news item(s).", len(items))
+    logger.info("Sent digest with %s news item(s).", len(items))
     return 0
-
-
-def print_dry_run(items: list[NewsItem], summaries: dict[str, AiNewsText]) -> None:
-    for index, item in enumerate(items, start=1):
-        if not item.image:
-            raise ValueError(f"Image URL is required for news item: {item.link}")
-        print(f"[PHOTO] {item.image}")
-        print(build_news_message(index, item, summaries[item.link]))
-        print()
 
 
 if __name__ == "__main__":

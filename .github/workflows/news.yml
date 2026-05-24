@@ -1,4 +1,4 @@
-name: Daily News Feed
+name: Daily News Digest
 
 permissions:
   contents: write
@@ -23,13 +23,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Send scheduled news feed
+      - name: Send scheduled news digest
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-          OPENAI_REQUEST_DELAY_SECONDS: ${{ vars.OPENAI_REQUEST_DELAY_SECONDS }}
           OPENAI_RATE_LIMIT_RETRIES: ${{ vars.OPENAI_RATE_LIMIT_RETRIES }}
           NEWS_LOOKBACK_HOURS: ${{ vars.NEWS_LOOKBACK_HOURS }}
         run: python main.py

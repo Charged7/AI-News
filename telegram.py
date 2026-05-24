@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-import logging
-from html import escape
 from dataclasses import dataclass
+from html import escape
 
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
-from rss import NewsItem
-
-logger = logging.getLogger(__name__)
 
 TELEGRAM_MESSAGE_LIMIT = 4096
-TELEGRAM_CAPTION_LIMIT = 1024
 
 
 @dataclass(frozen=True)
@@ -35,24 +30,6 @@ class TelegramClient:
             },
         )
 
-    def send_photo(self, photo_url: str, caption: str) -> None:
-        self._post(
-            "sendPhoto",
-            {
-                "chat_id": self.settings.chat_id,
-                "photo": photo_url,
-                "caption": _truncate(caption, TELEGRAM_CAPTION_LIMIT),
-                "parse_mode": "HTML",
-            },
-        )
-
-    def send_news_item(self, index: int, item: NewsItem, summary: object) -> None:
-        if item.image:
-            self.send_photo(item.image, build_news_message(index, item, summary, limit=TELEGRAM_CAPTION_LIMIT))
-            return
-
-        self.send_message(build_news_message(index, item, summary, limit=TELEGRAM_MESSAGE_LIMIT))
-
     def _post(self, method: str, payload: dict[str, str]) -> None:
         import requests
 
@@ -62,14 +39,10 @@ class TelegramClient:
             raise RuntimeError(f"Telegram {method} failed: {response.status_code} {response.text}")
 
 
-def build_news_message(index: int, item: NewsItem, summary: object, limit: int = TELEGRAM_MESSAGE_LIMIT) -> str:
-    title = getattr(summary, "title", item.title)
-    summary_text = getattr(summary, "summary", str(summary))
-    prefix = f"📰 <b>{escape(str(title))}</b> ({escape(item.source)})\n\n"
-    suffix = f"\n\n{escape(item.link)}"
-    available_summary_length = max(40, limit - len(prefix) - len(suffix))
-    summary_text = _truncate(str(summary_text).strip(), available_summary_length)
-    return _truncate(f"{prefix}{escape(summary_text)}{suffix}", limit)
+def build_digest_message(digest: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> str:
+    header = "🗞️ <b>Дайджест новин</b>\n\n"
+    body = escape(digest.strip())
+    return _truncate(f"{header}{body}", limit)
 
 
 def _truncate(text: str, limit: int) -> str:

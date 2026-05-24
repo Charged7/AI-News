@@ -35,9 +35,9 @@ class NewsItem:
 
 
 def fetch_recent_news(
-    sources: Iterable[RSSSource],
-    lookback_hours: int,
-    now: datetime | None = None,
+        sources: Iterable[RSSSource],
+        lookback_hours: int,
+        now: datetime | None = None,
 ) -> list[NewsItem]:
     if feedparser is None:
         raise RuntimeError("feedparser is not installed. Run: pip install -r requirements.txt")

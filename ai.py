@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import logging
 import json
+import logging
 import re
 import time
 from dataclasses import dataclass
 from typing import Iterable
 
-from config import OPENAI_API_KEY, OPENAI_MODEL, OPENAI_RATE_LIMIT_RETRIES, OPENAI_REQUEST_DELAY_SECONDS
+from config import OPENAI_API_KEY, OPENAI_MODEL, OPENAI_RATE_LIMIT_RETRIES
+from prompts import build_openai_digest_messages
 from rss import NewsItem
 
 logger = logging.getLogger(__name__)
@@ -18,99 +19,57 @@ class AISummaryError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class AiNewsText:
-    title: str
-    summary: str
+class AiNewsDigest:
+    digest: str
 
 
-def summarize_news_items(
+def summarize_news_digest(
     items: Iterable[NewsItem],
     api_key: str = OPENAI_API_KEY,
     model: str = OPENAI_MODEL,
-    request_delay_seconds: float = OPENAI_REQUEST_DELAY_SECONDS,
     rate_limit_retries: int = OPENAI_RATE_LIMIT_RETRIES,
-) -> dict[str, AiNewsText]:
+) -> AiNewsDigest:
     if not api_key:
         raise AISummaryError("OPENAI_API_KEY is required for AI summaries.")
 
-    summaries: dict[str, AiNewsText] = {}
-    last_ai_request_at: float | None = None
-
-    for item in items:
-        try:
-            if last_ai_request_at is not None and request_delay_seconds > 0:
-                elapsed = time.monotonic() - last_ai_request_at
-                if elapsed < request_delay_seconds:
-                    time.sleep(request_delay_seconds - elapsed)
-            summaries[item.link] = _summarize_with_openai_with_rate_limit_retry(
-                item,
-                api_key=api_key,
-                model=model,
-                rate_limit_retries=rate_limit_retries,
-            )
-            last_ai_request_at = time.monotonic()
-        except Exception as exc:  # pragma: no cover - external API resilience
-            logger.warning("AI summary failed for %s: %s", item.link, exc)
-            raise AISummaryError(f"AI summary failed for {item.link}") from exc
-
-    return summaries
-
-
-def summarize_news_item(
-    item: NewsItem,
-    api_key: str = OPENAI_API_KEY,
-    model: str = OPENAI_MODEL,
-) -> AiNewsText:
-    if not api_key:
-        raise AISummaryError("OPENAI_API_KEY is required for AI summaries.")
+    item_list = list(items)
+    if not item_list:
+        raise AISummaryError("At least one news item is required for a digest.")
 
     try:
-        return _summarize_with_openai(item, api_key=api_key, model=model)
+        return _summarize_digest_with_openai_with_rate_limit_retry(
+            item_list,
+            api_key=api_key,
+            model=model,
+            rate_limit_retries=rate_limit_retries,
+        )
     except Exception as exc:  # pragma: no cover - external API resilience
-        logger.warning("AI summary failed for %s: %s", item.link, exc)
-        raise AISummaryError(f"AI summary failed for {item.link}") from exc
+        logger.warning("AI digest failed: %s", exc)
+        raise AISummaryError("AI digest generation failed.") from exc
 
 
-def _summarize_with_openai(item: NewsItem, api_key: str, model: str) -> AiNewsText:
+def _summarize_digest_with_openai(items: list[NewsItem], api_key: str, model: str) -> AiNewsDigest:
     from openai import OpenAI
 
     client = OpenAI(api_key=api_key, max_retries=0)
     response = client.chat.completions.create(
         model=model,
         temperature=0.2,
-        max_tokens=260,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Ти редактор ранкової стрічки новин. Переклади заголовок українською і підсумуй новину "
-                    "українською у 1-2 реченнях. Не вигадуй фактів, не додавай посилань, не згадуй і не створюй "
-                    "зображень. Поверни тільки валідний JSON без markdown."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Source: {item.source}\n"
-                    f"Title: {item.title}\n"
-                    f"Text: {item.description}\n\n"
-                    'Поверни JSON у форматі: {"title_uk": "...", "summary_uk": "..."}'
-                ),
-            },
-        ],
+        max_tokens=320,
+        messages=build_openai_digest_messages(items),
     )
-    return _parse_ai_response(response.choices[0].message.content, item)
+    return _parse_digest_response(response.choices[0].message.content)
 
 
-def _summarize_with_openai_with_rate_limit_retry(
-    item: NewsItem,
+def _summarize_digest_with_openai_with_rate_limit_retry(
+    items: list[NewsItem],
     api_key: str,
     model: str,
     rate_limit_retries: int,
-) -> AiNewsText:
+) -> AiNewsDigest:
     for attempt in range(rate_limit_retries + 1):
         try:
-            return _summarize_with_openai(item, api_key=api_key, model=model)
+            return _summarize_digest_with_openai(items, api_key=api_key, model=model)
         except Exception as exc:
             if not _is_rate_limit_error(exc) or attempt >= rate_limit_retries:
                 raise
@@ -121,10 +80,10 @@ def _summarize_with_openai_with_rate_limit_retry(
     raise AISummaryError("Unreachable rate-limit retry state.")
 
 
-def _parse_ai_response(content: str | None, item: NewsItem) -> AiNewsText:
+def _parse_digest_response(content: str | None) -> AiNewsDigest:
     text = (content or "").strip()
     if not text:
-        raise AISummaryError(f"OpenAI returned an empty response for {item.link}.")
+        raise AISummaryError("OpenAI returned an empty digest response.")
 
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
@@ -133,14 +92,13 @@ def _parse_ai_response(content: str | None, item: NewsItem) -> AiNewsText:
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise AISummaryError(f"OpenAI returned invalid JSON for {item.link}.") from exc
+        raise AISummaryError("OpenAI returned invalid digest JSON.") from exc
 
-    title = str(data.get("title_uk", "")).strip()
-    summary = str(data.get("summary_uk", "")).strip()
-    if not title or not summary:
-        raise AISummaryError(f"OpenAI returned incomplete title/summary for {item.link}.")
+    digest = str(data.get("digest_uk", "")).strip()
+    if not digest:
+        raise AISummaryError("OpenAI returned an empty digest.")
 
-    return AiNewsText(title=title, summary=summary)
+    return AiNewsDigest(digest=digest)
 
 
 def _is_rate_limit_error(exc: Exception) -> bool:

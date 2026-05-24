@@ -1,28 +1,30 @@
 # AI Telegram News Bot
 
-Automated Telegram news feed that reads RSS sources, summarizes each article with OpenAI, and sends one Telegram message per news item. The current sources are The Verge, Engadget, 9to5Mac, AppleInsider News, and TechCrunch, and RSS handling is multi-source ready.
+Автоматизований Telegram-бот, який читає RSS-джерела, збирає нові статті за заданий проміжок часу, підсумовує їх через OpenAI та надсилає **один структурований digest** у Telegram. Поточні джерела: The Verge, Engadget, 9to5Mac, AppleInsider News і TechCrunch.
 
-## What It Does
+## Що робить проєкт
 
-- Fetches recent articles from RSS sources.
-- Remembers sent article links in `data/sent_news.json` and sends only new articles.
-- Extracts `title`, `description`, `link`, `image`, `source`, and publication time.
-- Uses OpenAI for Ukrainian summaries.
-- Fails fast when OpenAI is not configured or summary generation fails.
-- Requires an image URL for every article and sends each article through Telegram `sendPhoto`.
-- Runs hourly through GitHub Actions without a server.
+- читає кілька RSS-джерел за один запуск;
+- зберігає вже надіслані посилання в `data/sent_news.json` і не дублює їх;
+- бере `title`, `description`, `link`, `source` і час публікації;
+- формує один AI-дigest українською;
+- надсилає один Telegram `sendMessage` замість окремих повідомлень по кожній новині;
+- запускається без сервера через GitHub Actions.
 
-## Project Structure
+## Структура проєкту
 
 ```text
 .
 ├── main.py
 ├── rss.py
 ├── ai.py
+├── prompts.py
 ├── telegram.py
 ├── config.py
+├── sent_news.py
 ├── data/
 │   └── sent_news.json
+├── tests/
 ├── requirements.txt
 ├── .env.example
 └── .github/
@@ -30,15 +32,15 @@ Automated Telegram news feed that reads RSS sources, summarizes each article wit
         └── news.yml
 ```
 
-## Setup
+## Налаштування
 
-Install dependencies:
+Встанови залежності:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Create a local `.env` from `.env.example` and set:
+Створи локальний `.env` на основі `.env.example` і заповни змінні:
 
 ```text
 TELEGRAM_BOT_TOKEN=...
@@ -46,58 +48,53 @@ TELEGRAM_CHAT_ID=...
 OPENAI_API_KEY=...
 ```
 
-`OPENAI_API_KEY` is required. Without it, the bot exits with an error instead of sending lower-quality local summaries.
+`OPENAI_API_KEY` обов’язковий. Без нього бот завершується з помилкою.
 
-## Run Locally
+## Запуск локально
 
-Preview the feed without sending Telegram messages:
-
-```bash
-python main.py --dry-run
-```
-
-If your OpenAI limit is 3 RPM, keep `OPENAI_REQUEST_DELAY_SECONDS=21` in `.env` so the bot waits between article summaries instead of hitting rate limits.
-
-Send messages for real:
+Щоб надіслати digest вручну:
 
 ```bash
 python main.py
 ```
 
-Scheduling is controlled by `.github/workflows/news.yml`; the Python script itself sends whenever it is executed.
+Якщо хочеш подивитися ширший період новин, можна змінити lookback:
+
+```bash
+python main.py --lookback-hours 48
+```
+
+Поведінка за замовчуванням тепер одна: бот завжди працює як digest. Окремого feed-режиму більше немає.
 
 ## GitHub Actions
 
-Add these repository secrets:
+Додай секрети в репозиторій:
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 - `OPENAI_API_KEY`
 
-Add these repository variables:
+Додай змінні репозиторію:
 
 - `OPENAI_MODEL`
-- `OPENAI_REQUEST_DELAY_SECONDS`
 - `OPENAI_RATE_LIMIT_RETRIES`
 - `NEWS_LOOKBACK_HOURS`
 
-The workflow runs hourly:
-
-- `0 * * * *`
-
-Use a wider RSS lookback than the hourly schedule so delayed GitHub runs do not miss articles. The sent-news history prevents duplicates:
+Workflow запускається щогодини:
 
 ```text
-NEWS_LOOKBACK_HOURS=6
+7,22,37,52 * * * *
 ```
 
-After every successful send, the workflow commits `data/sent_news.json` back to the repository. This lets the next hourly run skip links that were already sent.
+Щоб не втрачати новини через затримки RSS або GitHub schedule, залишай `NEWS_LOOKBACK_HOURS=24`, а історія відправок у `data/sent_news.json` прибирає дублікати.
 
-Manual `workflow_dispatch` runs send immediately.
+Після успішної відправки workflow комітить оновлений `data/sent_news.json` назад у репозиторій. Це дозволяє наступному запуску пропускати вже надіслані лінки.
 
-## Add Another RSS Source
+`workflow_dispatch` теж увімкнений, тож digest можна запускати вручну.
 
-Edit `RSS_SOURCES` in `config.py`:
+## Додавання нового RSS
+
+Відкрий `config.py` і додай нове джерело в `RSS_SOURCES`:
 
 ```python
 RSS_SOURCES = [
@@ -106,8 +103,8 @@ RSS_SOURCES = [
     RSSSource(name="9to5Mac", url="https://9to5mac.com/feed/"),
     RSSSource(name="AppleInsider News", url="https://appleinsider.com/rss/news/"),
     RSSSource(name="TechCrunch", url="https://techcrunch.com/feed/"),
-    RSSSource(name="Another Source", url="https://example.com/rss.xml"),
+    RSSSource(name="New Source", url="https://example.com/rss.xml"),
 ]
 ```
 
-No AI or Telegram logic changes are needed.
+Після цього логіка AI та Telegram не потребує змін.
