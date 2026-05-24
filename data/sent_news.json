@@ -1,6 +1,30 @@
 {
   "items": [
     {
+      "link": "https://techcrunch.com/2026/05/24/techcrunch-mobility-robotaxi-reality-check/",
+      "title": "TechCrunch Mobility: Robotaxi reality check",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-24T16:36:53.230624+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/24/apple-improving-heart-rate-tracking-in-watchos-27-mulberry-health-coach-delays/",
+      "title": "Report: watchOS 27 to improve heart-rate tracking; AI health coach may not debut at launch",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-24T16:36:53.230624+00:00"
+    },
+    {
+      "link": "https://appleinsider.com/articles/26/05/24/googles-cast-to-tv-could-join-airplay-on-iphones-thanks-to-eu-regulations?utm_source=rss",
+      "title": "Google's 'Cast to TV' could join AirPlay on iPhones thanks to EU regulations",
+      "source": "AppleInsider News",
+      "sent_at": "2026-05-24T16:36:53.230624+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2180225/kalshi-and-rhode-island-sue-each-other-in-latest-challenge-to-prediction-markets/",
+      "title": "Kalshi and Rhode Island sue each other in latest challenge to prediction markets",
+      "source": "Engadget",
+      "sent_at": "2026-05-24T16:36:53.230624+00:00"
+    },
+    {
       "link": "https://appleinsider.com/articles/26/05/24/apples-worst-ai-feature-to-get-a-big-boost-with-upgraded-apple-foundation-models?utm_source=rss",
       "title": "Apple's worst AI feature to get a 'big boost' with upgraded Apple Foundation Models",
       "source": "AppleInsider News",
