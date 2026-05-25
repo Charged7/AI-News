@@ -68,7 +68,7 @@ class TelegramClient:
         self.send_message(message)
 
     def _post(self, method: str, payload: dict[str, str]) -> None:
-        """Виконує HTTP-запит до Telegram API і піднімає помилку, якщо він не вдався."""
+        """Виконує HTTP-запит до Telegram API та піднімає помилку, якщо він не вдався."""
         import requests
 
         url = f"https://api.telegram.org/bot{self.settings.bot_token}/{method}"
@@ -81,7 +81,7 @@ def build_news_message(index: int, item: NewsItem, summary: object, limit: int =
     """Формує HTML-картку однієї новини для Telegram."""
     title = getattr(summary, "title", item.title)
     summary_text = getattr(summary, "summary", str(summary))
-    prefix = f"📰 <b>{escape(str(title))}</b> ({escape(item.source)})\n\n"
+    prefix = f"<b>{escape(str(title))}</b> ({escape(item.source)})\n\n"
     suffix = f"\n\n{escape(item.link)}"
     available_summary_length = max(40, limit - len(prefix) - len(suffix))
     summary_text = _truncate(str(summary_text).strip(), available_summary_length)

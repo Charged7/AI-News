@@ -16,7 +16,8 @@ class TelegramTests(unittest.TestCase):
         item = NewsItem("Title", "Desc", "https://example.test", None, "The Verge")
         message = build_news_message(1, item, AiNewsText("Український заголовок", "Короткий опис."))
 
-        self.assertIn("📰 <b>Український заголовок</b> (The Verge)", message)
+        self.assertIn("<b>Український заголовок</b> (The Verge)", message)
+        self.assertNotIn("📰", message)
         self.assertIn("Короткий опис.", message)
         self.assertIn("https://example.test", message)
 

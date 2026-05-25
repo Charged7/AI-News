@@ -21,6 +21,7 @@ class PromptTests(unittest.TestCase):
 
         self.assertEqual(messages[0]["role"], "system")
         self.assertIn("Не вигадуй фактів", OPENAI_NEWS_SYSTEM_PROMPT)
+        self.assertIn("Не додавай жодних emoji", OPENAI_NEWS_SYSTEM_PROMPT)
         self.assertIn("Поверни JSON у форматі", OPENAI_NEWS_USER_PROMPT_TEMPLATE)
         self.assertEqual(messages[1]["role"], "user")
         self.assertIn("Source: The Verge", messages[1]["content"])
