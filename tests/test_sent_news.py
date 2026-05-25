@@ -1,3 +1,5 @@
+"""Тести для JSON-сховища вже відправлених новин."""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +13,8 @@ from sent_news import SentNewsStore
 
 
 class SentNewsStoreTests(unittest.TestCase):
+    """Перевіряє збереження, завантаження та очищення history-файлу."""
+
     def test_filter_unsent_removes_previously_sent_links(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "sent_news.json"

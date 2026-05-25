@@ -1,3 +1,5 @@
+"""Локальне сховище історії відправлених новин для дедуплікації."""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +13,8 @@ from rss import NewsItem
 
 @dataclass(frozen=True)
 class SentNewsRecord:
+    """Одна записана відправка новини в історії."""
+
     link: str
     title: str
     source: str
@@ -18,6 +22,8 @@ class SentNewsRecord:
 
 
 class SentNewsStore:
+    """Просте JSON-сховище для збереження вже відправлених лінків."""
+
     def __init__(self, path: str | Path, retention_days: int) -> None:
         self.path = Path(path)
         self.retention_days = retention_days
@@ -25,6 +31,7 @@ class SentNewsStore:
 
     @classmethod
     def load(cls, path: str | Path, retention_days: int) -> "SentNewsStore":
+        """Завантажує історію з диска або створює порожнє сховище."""
         store = cls(path, retention_days)
         if not store.path.exists():
             return store
@@ -44,9 +51,11 @@ class SentNewsStore:
         return store
 
     def filter_unsent(self, items: Iterable[NewsItem]) -> list[NewsItem]:
+        """Повертає лише ті новини, яких ще немає в історії."""
         return [item for item in items if _link_key(item.link) not in self.records]
 
     def mark_sent(self, items: Iterable[NewsItem], now: datetime | None = None) -> None:
+        """Позначає список новин як уже надісланий."""
         sent_at = _as_utc(now or datetime.now(UTC))
         for item in items:
             self.records[_link_key(item.link)] = SentNewsRecord(
@@ -57,6 +66,7 @@ class SentNewsStore:
             )
 
     def prune(self, now: datetime | None = None) -> None:
+        """Видаляє старі записи, щоб JSON не ріс безмежно."""
         cutoff = _as_utc(now or datetime.now(UTC)) - timedelta(days=self.retention_days)
         self.records = {
             link_key: record
@@ -65,6 +75,7 @@ class SentNewsStore:
         }
 
     def save(self) -> None:
+        """Зберігає історію на диск у передбачуваному JSON-форматі."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         records = sorted(self.records.values(), key=lambda record: record.sent_at, reverse=True)
         data = {
@@ -82,10 +93,12 @@ class SentNewsStore:
 
 
 def _link_key(link: str) -> str:
+    """Нормалізує link для стабільного порівняння."""
     return link.strip().lower()
 
 
 def _parse_datetime(value: object) -> datetime | None:
+    """Парсить ISO-дату з JSON історії, якщо вона валідна."""
     if not value:
         return None
     try:
@@ -95,6 +108,7 @@ def _parse_datetime(value: object) -> datetime | None:
 
 
 def _as_utc(value: datetime) -> datetime:
+    """Нормалізує datetime до UTC для порівняння і збереження."""
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)

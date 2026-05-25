@@ -1,9 +1,10 @@
-name: Daily News Digest
+name: Daily News Feed
 
 permissions:
   contents: write
 
 on:
+  # Щогодинний розклад; GitHub може запускати його із затримкою.
   schedule:
     - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
@@ -23,8 +24,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Send scheduled news digest
+      - name: Send scheduled news cards
         env:
+          # Секрети для Telegram та OpenAI підтягуються з GitHub repository settings.
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -36,6 +38,7 @@ jobs:
       - name: Commit sent news history
         if: always()
         run: |
+          # Комітимо історію тільки якщо JSON справді змінився.
           if git diff --quiet -- data/sent_news.json; then
             echo "No sent news history changes."
             exit 0

@@ -1,3 +1,5 @@
+"""RSS-завантаження, очищення, дедуплікація та відбір нових новин."""
+
 from __future__ import annotations
 
 import html
@@ -26,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class NewsItem:
+    """Уніфікований запис новини, який далі використовують AI та Telegram."""
+
     title: str
     description: str
     link: str
@@ -39,6 +43,7 @@ def fetch_recent_news(
         lookback_hours: int,
         now: datetime | None = None,
 ) -> list[NewsItem]:
+    """Збирає новини з усіх RSS-джерел за вказаний часовий проміжок."""
     if feedparser is None:
         raise RuntimeError("feedparser is not installed. Run: pip install -r requirements.txt")
 
@@ -63,6 +68,7 @@ def fetch_recent_news(
 
 
 def normalize_entry(entry: Any, source_name: str) -> NewsItem | None:
+    """Перетворює сирий RSS entry на NewsItem або пропускає його, якщо даних замало."""
     title = clean_text(_entry_get(entry, "title", ""))
     link = str(_entry_get(entry, "link", "") or "").strip()
     description_html = _entry_description(entry)
@@ -83,6 +89,7 @@ def normalize_entry(entry: Any, source_name: str) -> NewsItem | None:
 
 
 def parse_entry_datetime(entry: Any) -> datetime | None:
+    """Витягує дату публікації з різних можливих RSS-полів."""
     for key in ("published_parsed", "updated_parsed", "created_parsed"):
         value = _entry_get(entry, key)
         if isinstance(value, struct_time):
@@ -101,6 +108,7 @@ def parse_entry_datetime(entry: Any) -> datetime | None:
 
 
 def is_recent(item: NewsItem, lookback_hours: int, now: datetime | None = None) -> bool:
+    """Перевіряє, чи потрапляє новина у потрібне вікно lookback."""
     if item.published_at is None:
         return False
     now_utc = _as_utc(now or datetime.now(UTC))
@@ -109,6 +117,7 @@ def is_recent(item: NewsItem, lookback_hours: int, now: datetime | None = None) 
 
 
 def deduplicate_news(items: Iterable[NewsItem]) -> list[NewsItem]:
+    """Прибирає дублікати спершу за link, потім за нормалізованим title."""
     seen_links: set[str] = set()
     seen_titles: set[str] = set()
     unique: list[NewsItem] = []
@@ -132,6 +141,7 @@ def deduplicate_news(items: Iterable[NewsItem]) -> list[NewsItem]:
 
 
 def sort_news(items: Iterable[NewsItem]) -> list[NewsItem]:
+    """Сортує новини від найновішої до найстарішої."""
     return sorted(
         items,
         key=lambda item: item.published_at or datetime.min.replace(tzinfo=UTC),
@@ -140,6 +150,7 @@ def sort_news(items: Iterable[NewsItem]) -> list[NewsItem]:
 
 
 def extract_image(entry: Any) -> str | None:
+    """Шукає картинку в media, enclosure, links або HTML всередині RSS entry."""
     for key in ("media_content", "media_thumbnail"):
         image = _first_media_url(_entry_get(entry, key))
         if image:
@@ -166,6 +177,7 @@ def extract_image(entry: Any) -> str | None:
 
 
 def clean_text(value: str) -> str:
+    """Очищає HTML, схлопує пробіли й робить текст придатним для повідомлення."""
     value = html.unescape(str(value or ""))
     if BeautifulSoup is not None:
         text = BeautifulSoup(value, "html.parser").get_text(" ", strip=True)
@@ -176,24 +188,28 @@ def clean_text(value: str) -> str:
 
 
 def normalize_title(title: str) -> str:
+    """Готує title до порівняння для дедуплікації."""
     normalized = clean_text(title).lower()
     normalized = re.sub(r"[^a-z0-9а-яіїєґ]+", " ", normalized, flags=re.IGNORECASE)
     return re.sub(r"\s+", " ", normalized).strip()
 
 
 def _entry_get(entry: Any, key: str, default: Any = None) -> Any:
+    """Універсально читає поле з dict-подібного або object-подібного entry."""
     if hasattr(entry, "get"):
         return entry.get(key, default)
     return getattr(entry, key, default)
 
 
 def _dict_get(value: Any, key: str, default: Any = None) -> Any:
+    """Читає поле з вкладеного елемента RSS, незалежно від його типу."""
     if hasattr(value, "get"):
         return value.get(key, default)
     return getattr(value, key, default)
 
 
 def _entry_description(entry: Any) -> str:
+    """Дістає опис новини з summary, description або content."""
     for key in ("summary", "description"):
         value = _entry_get(entry, key)
         if value:
@@ -208,6 +224,7 @@ def _entry_description(entry: Any) -> str:
 
 
 def _entry_html_values(entry: Any) -> list[str]:
+    """Збирає HTML-поля entry для пошуку зображень у body."""
     values = [_entry_description(entry)]
     content = _entry_get(entry, "content") or []
     values.extend(str(_dict_get(item, "value", "") or "") for item in content)
@@ -215,6 +232,7 @@ def _entry_html_values(entry: Any) -> list[str]:
 
 
 def _first_media_url(items: Any) -> str | None:
+    """Повертає перший придатний URL із media/enclosure списку."""
     if not items:
         return None
     if isinstance(items, dict):
@@ -230,6 +248,7 @@ def _first_media_url(items: Any) -> str | None:
 
 
 def _extract_first_img_src(value: str) -> str | None:
+    """Дістає src першого <img> із HTML-рядка."""
     if BeautifulSoup is not None:
         soup = BeautifulSoup(value, "html.parser")
         image = soup.find("img")
@@ -243,10 +262,12 @@ def _extract_first_img_src(value: str) -> str | None:
 
 
 def _looks_like_image_url(value: str) -> bool:
+    """Перевіряє, чи схожа URL на пряме посилання на картинку."""
     return bool(re.search(r"\.(jpe?g|png|webp|gif)(\?|$)", value, flags=re.IGNORECASE))
 
 
 def _as_utc(value: datetime) -> datetime:
+    """Нормалізує datetime до UTC, щоб порівняння були стабільними."""
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)

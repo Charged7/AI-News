@@ -1,3 +1,5 @@
+"""Тести для RSS-нормалізації, дат, зображень і дедуплікації."""
+
 from __future__ import annotations
 
 import unittest
@@ -7,6 +9,8 @@ from rss import NewsItem, deduplicate_news, extract_image, is_recent
 
 
 class RssTests(unittest.TestCase):
+    """Перевіряє базові RSS-хелпери без живих зовнішніх запитів."""
+
     def test_is_recent_keeps_only_items_inside_lookback_window(self) -> None:
         now = datetime(2026, 5, 20, 9, 0, tzinfo=UTC)
         recent = NewsItem("A", "Desc", "https://a.test", None, "Source", now - timedelta(hours=1))
