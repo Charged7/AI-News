@@ -1,6 +1,120 @@
 {
   "items": [
     {
+      "link": "https://www.theverge.com/transportation/937077/ferrari-luce-ev-apple-car-jony-ice-design",
+      "title": "Jony Ive’s Ferrari looks nothing like a Ferrari",
+      "source": "The Verge",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/news/937221/nvidia-geforce-control-panel-app-retirement",
+      "title": "Nvidia has retired its GeForce Control Panel app after 20 years",
+      "source": "The Verge",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://appleinsider.com/articles/26/05/26/iphone-fold-now-reportedly-held-up-by-circuit-board-problems?utm_source=rss",
+      "title": "iPhone Fold now reportedly held up by circuit board problems",
+      "source": "AppleInsider News",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/podcast/937188/clips-internet-feed-fitbit-air-vergecast",
+      "title": "How clips ate the internet",
+      "source": "The Verge",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/podcast/936445/sundar-pichai-ai-search-google-zero-youtube-web",
+      "title": "Sundar Pichai on AI, the future of search, and what’s happening to the web",
+      "source": "The Verge",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/2026/05/26/techcrunch-disrupt-2026-early-bird-ticket-rates-end-may-29/",
+      "title": "TechCrunch Disrupt 2026 Early Bird ticket rates end May 29",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/26/apple-watch-glucose-monitoring-project-gets-encouraging-update/",
+      "title": "Apple Watch glucose monitoring project gets encouraging update",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2180965/gopro-mission-1-pro-review/",
+      "title": "GoPro Mission 1 Pro review: The best action cam video quality comes at a high price",
+      "source": "Engadget",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/2026/05/26/7-eleven-data-breach-affects-over-185000-peoples-personal-data/",
+      "title": "7-Eleven data breach affects over 185,000 people’s personal data",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2180910/fitbit-air-review-google-health-ai-coach-testing/",
+      "title": "Fitbit Air review: Health tracking for the AI generation",
+      "source": "Engadget",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/ai-artificial-intelligence/937059/nobody-wants-to-tell-me-why-they-only-listen-their-own-suno-slop",
+      "title": "Nobody wants to tell me why they only listen to their own Suno slop",
+      "source": "The Verge",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/ai-artificial-intelligence/937028/military-ai-warfare-red-lines",
+      "title": "AI warfare is already here",
+      "source": "The Verge",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://techcrunch.com/2026/05/26/amazon-fulfillment-competitor-stord-raises-250m-at-3b-valuation/",
+      "title": "Amazon fulfillment competitor Stord raises $250M at $3B valuation",
+      "source": "TechCrunch",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2180919/spotify-narrated-articles-audiobook-library/",
+      "title": "Spotify is adding long-form articles to its audiobook library",
+      "source": "Engadget",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/entertainment/937126/spotify-long-form-magazine-article-narration-availability",
+      "title": "Spotify is narrating magazine articles now",
+      "source": "The Verge",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://9to5mac.com/2026/05/26/apple-work-podcast-the-future-of-security-training/",
+      "title": "Apple @ Work Podcast: The future of security training",
+      "source": "9to5Mac",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/transportation/937116/uber-ai-investment-hard-to-justify",
+      "title": "Uber president says AI spending is getting ‘harder to justify’",
+      "source": "The Verge",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.theverge.com/tech/937090/battery-powered-starlink-mini-rumor",
+      "title": "A battery-powered Starlink Mini is likely on the way",
+      "source": "The Verge",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
+      "link": "https://www.engadget.com/2180875/blue-origin-new-glenn-faa-clearance/",
+      "title": "Blue Origin cleared to launch New Glenn rocket again after FAA investigation",
+      "source": "Engadget",
+      "sent_at": "2026-05-26T14:21:31.417364+00:00"
+    },
+    {
       "link": "https://9to5mac.com/2026/05/25/tim-cook-marks-memorial-day-with-annual-tribute-post/",
       "title": "Tim Cook marks Memorial Day with annual tribute post",
       "source": "9to5Mac",
