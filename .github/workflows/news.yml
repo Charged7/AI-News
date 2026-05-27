@@ -6,7 +6,7 @@ permissions:
 on:
   # Щогодинний розклад; GitHub може запускати його із затримкою.
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    - cron: "23 * * * *"
   workflow_dispatch:
 
 jobs:

@@ -79,7 +79,7 @@ OPENAI_API_KEY=...
 Workflow запускається щогодини:
 
 ```text
-7,22,37,52 * * * *
+23 * * * *
 ```
 
 Щоб не втрачати новини через затримки RSS або GitHub schedule, залишай `NEWS_LOOKBACK_HOURS=24`, а історія відправок у `data/sent_news.json` прибирає дублікати.
