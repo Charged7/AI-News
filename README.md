@@ -76,13 +76,9 @@ OPENAI_API_KEY=...
 - `OPENAI_SUMMARY_MAX_TOKENS`
 - `NEWS_LOOKBACK_HOURS`
 
-Workflow запускається щогодини:
+Щогодинний запуск виконує внутрішня Codex automation: вона щогодини о `HH:00` викликає `workflow_dispatch`. GitHub `schedule` навмисно вимкнений, бо cron-запуски GitHub Actions можуть приходити із великою затримкою.
 
-```text
-23 * * * *
-```
-
-Щоб не втрачати новини через затримки RSS або GitHub schedule, залишай `NEWS_LOOKBACK_HOURS=24`, а історія відправок у `data/sent_news.json` прибирає дублікати.
+Щоб не втрачати новини через затримки RSS або нерівномірні dispatch-запуски, залишай `NEWS_LOOKBACK_HOURS=24`, а історія відправок у `data/sent_news.json` прибирає дублікати.
 
 Після успішної відправки workflow комітить оновлений `data/sent_news.json` назад у репозиторій. Це дозволяє наступному запуску пропускати вже надіслані лінки.
 
