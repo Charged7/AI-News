@@ -1,7 +1,5 @@
 """Шаблони промптів для batch-обробки новин одним OpenAI-запитом."""
 
-from __future__ import annotations
-
 from rss import NewsItem
 
 OPENAI_NEWS_SYSTEM_PROMPT = """

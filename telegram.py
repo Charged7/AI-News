@@ -1,9 +1,6 @@
 """Telegram-відправка: окрема картка на кожну новину."""
 
-from __future__ import annotations
-
 import logging
-from dataclasses import dataclass
 from html import escape
 
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
@@ -15,20 +12,13 @@ TELEGRAM_MESSAGE_LIMIT = 4096
 TELEGRAM_CAPTION_LIMIT = 1024
 
 
-@dataclass(frozen=True)
-class TelegramSettings:
-    """Параметри доступу до Telegram API."""
-
-    bot_token: str = TELEGRAM_BOT_TOKEN
-    chat_id: str = TELEGRAM_CHAT_ID
-
-
 class TelegramClient:
     """Мінімальний клієнт для надсилання новин у Telegram."""
 
-    def __init__(self, settings: TelegramSettings | None = None) -> None:
-        self.settings = settings or TelegramSettings()
-        if not self.settings.bot_token or not self.settings.chat_id:
+    def __init__(self, bot_token: str = TELEGRAM_BOT_TOKEN, chat_id: str = TELEGRAM_CHAT_ID) -> None:
+        self.bot_token = bot_token
+        self.chat_id = chat_id
+        if not self.bot_token or not self.chat_id:
             raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required for sending.")
 
     def send_message(self, text: str) -> None:
@@ -36,7 +26,7 @@ class TelegramClient:
         self._post(
             "sendMessage",
             {
-                "chat_id": self.settings.chat_id,
+                "chat_id": self.chat_id,
                 "text": _truncate(text, TELEGRAM_MESSAGE_LIMIT),
                 "parse_mode": "HTML",
             },
@@ -47,16 +37,16 @@ class TelegramClient:
         self._post(
             "sendPhoto",
             {
-                "chat_id": self.settings.chat_id,
+                "chat_id": self.chat_id,
                 "photo": photo_url,
                 "caption": _truncate(caption, TELEGRAM_CAPTION_LIMIT),
                 "parse_mode": "HTML",
             },
         )
 
-    def send_news_item(self, index: int, item: NewsItem, summary: object) -> None:
+    def send_news_item(self, item: NewsItem, summary: object) -> None:
         """Надсилає одну новину як картку; якщо фото зламалось, падає назад на текст."""
-        message = build_news_message(index, item, summary, limit=TELEGRAM_MESSAGE_LIMIT)
+        message = build_news_message(item, summary, limit=TELEGRAM_MESSAGE_LIMIT)
         if item.image:
             try:
                 photo_caption = _truncate(message, TELEGRAM_CAPTION_LIMIT)
@@ -71,13 +61,13 @@ class TelegramClient:
         """Виконує HTTP-запит до Telegram API та піднімає помилку, якщо він не вдався."""
         import requests
 
-        url = f"https://api.telegram.org/bot{self.settings.bot_token}/{method}"
+        url = f"https://api.telegram.org/bot{self.bot_token}/{method}"
         response = requests.post(url, data=payload, timeout=30)
         if not response.ok:
             raise RuntimeError(f"Telegram {method} failed: {response.status_code} {response.text}")
 
 
-def build_news_message(index: int, item: NewsItem, summary: object, limit: int = TELEGRAM_MESSAGE_LIMIT) -> str:
+def build_news_message(item: NewsItem, summary: object, limit: int = TELEGRAM_MESSAGE_LIMIT) -> str:
     """Формує HTML-картку однієї новини для Telegram."""
     title = getattr(summary, "title", item.title)
     summary_text = getattr(summary, "summary", str(summary))

@@ -31,7 +31,8 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-          OPENAI_RATE_LIMIT_RETRIES: ${{ vars.OPENAI_RATE_LIMIT_RETRIES }}
+          OPENAI_SUMMARY_BATCH_SIZE: ${{ vars.OPENAI_SUMMARY_BATCH_SIZE }}
+          OPENAI_SUMMARY_MAX_TOKENS: ${{ vars.OPENAI_SUMMARY_MAX_TOKENS }}
           NEWS_LOOKBACK_HOURS: ${{ vars.NEWS_LOOKBACK_HOURS }}
         run: python main.py
 

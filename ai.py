@@ -1,15 +1,17 @@
 """OpenAI-логіка: готує batch summaries для новин і парсить JSON-відповідь."""
 
-from __future__ import annotations
-
 import json
 import logging
 import re
-import time
 from dataclasses import dataclass
 from typing import Iterable
 
-from config import OPENAI_API_KEY, OPENAI_MODEL, OPENAI_RATE_LIMIT_RETRIES
+from config import (
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
+    OPENAI_SUMMARY_BATCH_SIZE,
+    OPENAI_SUMMARY_MAX_TOKENS,
+)
 from prompts import build_openai_messages
 from rss import NewsItem
 
@@ -32,7 +34,8 @@ def summarize_news_items(
     items: Iterable[NewsItem],
     api_key: str = OPENAI_API_KEY,
     model: str = OPENAI_MODEL,
-    rate_limit_retries: int = OPENAI_RATE_LIMIT_RETRIES,
+    batch_size: int = OPENAI_SUMMARY_BATCH_SIZE,
+    max_tokens: int = OPENAI_SUMMARY_MAX_TOKENS,
 ) -> dict[str, AiNewsText]:
     """Генерує перекладені заголовки та summaries для всіх новин одним запитом."""
     if not api_key:
@@ -41,14 +44,23 @@ def summarize_news_items(
     item_list = list(items)
     if not item_list:
         raise AISummaryError("At least one news item is required for AI summaries.")
+    if batch_size < 1:
+        raise AISummaryError("OPENAI_SUMMARY_BATCH_SIZE must be at least 1.")
+    if max_tokens < 1:
+        raise AISummaryError("OPENAI_SUMMARY_MAX_TOKENS must be at least 1.")
 
     try:
-        return _summarize_news_items_with_openai_with_rate_limit_retry(
-            item_list,
-            api_key=api_key,
-            model=model,
-            rate_limit_retries=rate_limit_retries,
-        )
+        summaries: dict[str, AiNewsText] = {}
+        for batch in _chunk_items(item_list, batch_size):
+            summaries.update(
+                _summarize_news_items_with_openai(
+                    batch,
+                    api_key=api_key,
+                    model=model,
+                    max_tokens=max_tokens,
+                )
+            )
+        return summaries
     except Exception as exc:  # pragma: no cover - external API resilience
         logger.warning("AI summary failed: %s", exc)
         raise AISummaryError("AI summary generation failed.") from exc
@@ -58,6 +70,7 @@ def _summarize_news_items_with_openai(
     items: list[NewsItem],
     api_key: str,
     model: str,
+    max_tokens: int,
 ) -> dict[str, AiNewsText]:
     """Відправляє batch-запит до OpenAI й парсить JSON у словник по link."""
     from openai import OpenAI
@@ -66,30 +79,24 @@ def _summarize_news_items_with_openai(
     response = client.chat.completions.create(
         model=model,
         temperature=0.2,
-        max_tokens=2200,
+        max_tokens=max_tokens,
+        response_format={"type": "json_object"},
         messages=build_openai_messages(items),
     )
-    return _parse_ai_response(response.choices[0].message.content, items)
+    choice = response.choices[0]
+    finish_reason = getattr(choice, "finish_reason", None)
+    if finish_reason == "length":
+        raise AISummaryError("OpenAI response was truncated before valid JSON.")
+    if finish_reason not in (None, "stop"):
+        raise AISummaryError(f"OpenAI stopped with unexpected finish_reason={finish_reason!r}.")
+
+    return _parse_ai_response(choice.message.content, items)
 
 
-def _summarize_news_items_with_openai_with_rate_limit_retry(
-    items: list[NewsItem],
-    api_key: str,
-    model: str,
-    rate_limit_retries: int,
-) -> dict[str, AiNewsText]:
-    """Повторює batch-запит, якщо OpenAI відповів rate limit помилкою."""
-    for attempt in range(rate_limit_retries + 1):
-        try:
-            return _summarize_news_items_with_openai(items, api_key=api_key, model=model)
-        except Exception as exc:
-            if not _is_rate_limit_error(exc) or attempt >= rate_limit_retries:
-                raise
-            wait_seconds = _retry_wait_seconds(exc)
-            logger.warning("OpenAI rate limit reached; waiting %.0fs before retrying.", wait_seconds)
-            time.sleep(wait_seconds)
-
-    raise AISummaryError("Unreachable rate-limit retry state.")
+def _chunk_items(items: list[NewsItem], batch_size: int) -> Iterable[list[NewsItem]]:
+    """Ділить новини на менші AI batches, щоб відповідь не обрізалась по max_tokens."""
+    for index in range(0, len(items), batch_size):
+        yield items[index : index + batch_size]
 
 
 def _parse_ai_response(content: str | None, items: Iterable[NewsItem]) -> dict[str, AiNewsText]:
@@ -141,17 +148,3 @@ def _parse_ai_response(content: str | None, items: Iterable[NewsItem]) -> dict[s
 def _link_key(link: str) -> str:
     """Нормалізує link для стабільного доступу до summary."""
     return link.strip().lower()
-
-
-def _is_rate_limit_error(exc: Exception) -> bool:
-    """Перевіряє, чи схожа помилка на rate limit від OpenAI."""
-    text = str(exc).lower()
-    return "rate_limit_exceeded" in text or "rate limit reached" in text
-
-
-def _retry_wait_seconds(exc: Exception) -> float:
-    """Дістає час очікування з тексту помилки або повертає запасне значення."""
-    match = re.search(r"try again in ([0-9.]+)s", str(exc), flags=re.IGNORECASE)
-    if match:
-        return max(1.0, float(match.group(1)) + 1.0)
-    return 21.0

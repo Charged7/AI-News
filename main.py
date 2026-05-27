@@ -1,8 +1,5 @@
 """Точка входу: збирає RSS, формує картки новин і надсилає їх у Telegram."""
 
-from __future__ import annotations
-
-import argparse
 import logging
 import sys
 
@@ -26,14 +23,10 @@ def main() -> int:
     """Запускає повний цикл: RSS -> dedup -> batch AI -> Telegram cards -> history."""
     configure_output()
 
-    parser = argparse.ArgumentParser(description="Send AI-generated Telegram news cards.")
-    parser.add_argument("--lookback-hours", type=int, default=NEWS_LOOKBACK_HOURS)
-    args = parser.parse_args()
-
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     try:
-        items = fetch_recent_news(RSS_SOURCES, lookback_hours=args.lookback_hours)
+        items = fetch_recent_news(RSS_SOURCES, lookback_hours=NEWS_LOOKBACK_HOURS)
     except Exception:
         logger.exception("RSS fetching failed.")
         return 1
@@ -46,9 +39,10 @@ def main() -> int:
 
     client = TelegramClient()
     try:
+        # OpenAI отримує весь список новин одним batch-запитом і повертає: перекладений заголовок, короткий summary для кожної новини.
         summaries = summarize_news_items(items)
-        for index, item in enumerate(items, start=1):
-            client.send_news_item(index, item, summaries[item.link.strip().lower()])
+        for item in items:
+            client.send_news_item(item, summaries[item.link.strip().lower()]) # надсилаємо в Telegram як картку.
     except AISummaryError:
         logger.exception("AI summary generation failed.")
         return 1
@@ -56,9 +50,17 @@ def main() -> int:
         logger.exception("Telegram sending failed.")
         return 1
 
+    # Якщо все успішно відправилось:
+
+    # новини помічаються як надіслані
     sent_store.mark_sent(items)
+
+    # старі записи чистяться
     sent_store.prune()
+
+    # історія зберігається назад у файл
     sent_store.save()
+
     logger.info("Sent %s news item(s).", len(items))
     return 0
 

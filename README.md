@@ -1,13 +1,13 @@
 # AI Telegram News Bot
 
-Автоматизований Telegram-бот, який читає RSS-джерела, збирає нові статті за заданий проміжок часу, робить один batch-запит до OpenAI для перекладу заголовків і коротких summary, а потім надсилає **окрему картку для кожної новини**. Поточні джерела: The Verge, Engadget, 9to5Mac, AppleInsider News і TechCrunch.
+Автоматизований Telegram-бот, який читає RSS-джерела, збирає нові статті за заданий проміжок часу, робить batch-запити до OpenAI невеликими порціями для перекладу заголовків і коротких summary, а потім надсилає **окрему картку для кожної новини**. Поточні джерела: The Verge, Engadget, 9to5Mac, AppleInsider News і TechCrunch.
 
 ## Що робить проєкт
 
 - читає кілька RSS-джерел за один запуск;
 - зберігає вже надіслані посилання в `data/sent_news.json` і не дублює їх;
 - бере `title`, `description`, `link`, `image`, `source` і час публікації;
-- використовує один OpenAI batch-запит для всіх новин запуску;
+- ділить новини на невеликі OpenAI batches, щоб відповідь не обрізалась посеред JSON;
 - формує окрему Telegram-картку для кожної новини;
 - якщо картинка для новини не підходить, автоматично падає назад на текст;
 - запускається без сервера через GitHub Actions.
@@ -56,13 +56,7 @@ OPENAI_API_KEY=...
 Щоб надіслати картки новин вручну:
 
 ```bash
-python main.py
-```
-
-Якщо хочеш подивитися ширший період новин, можна змінити lookback:
-
-```bash
-python main.py --lookback-hours 48
+.\.venv\Scripts\python.exe main.py
 ```
 
 Окремого зведеного повідомлення більше немає. Кожна новина йде окремою карткою.
@@ -78,7 +72,8 @@ python main.py --lookback-hours 48
 Додай змінні репозиторію:
 
 - `OPENAI_MODEL`
-- `OPENAI_RATE_LIMIT_RETRIES`
+- `OPENAI_SUMMARY_BATCH_SIZE`
+- `OPENAI_SUMMARY_MAX_TOKENS`
 - `NEWS_LOOKBACK_HOURS`
 
 Workflow запускається щогодини:

@@ -1,7 +1,5 @@
 """RSS-завантаження, очищення, дедуплікація та відбір нових новин."""
 
-from __future__ import annotations
-
 import html
 import logging
 import re

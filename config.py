@@ -1,6 +1,5 @@
 """Централізовані налаштування бота та завантаження змінних середовища."""
 
-from __future__ import annotations
 import os
 from dataclasses import dataclass
 
@@ -12,6 +11,16 @@ except ImportError:  # pragma: no cover - dependency is optional at runtime
 if load_dotenv:
     # Локально підтягуємо значення з .env, щоб не вводити їх вручну щоразу.
     load_dotenv()
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer.") from exc
 
 
 @dataclass(frozen=True)
@@ -35,10 +44,11 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # Параметри OpenAI для batch-підсумків новин.
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-OPENAI_RATE_LIMIT_RETRIES = int(os.getenv("OPENAI_RATE_LIMIT_RETRIES", "3"))
+OPENAI_MODEL = os.getenv("OPENAI_MODEL") or "gpt-4o-mini"
+OPENAI_SUMMARY_BATCH_SIZE = _env_int("OPENAI_SUMMARY_BATCH_SIZE", 8)
+OPENAI_SUMMARY_MAX_TOKENS = _env_int("OPENAI_SUMMARY_MAX_TOKENS", 4000)
 
 # Межі вибірки та збереження історії відправок.
-NEWS_LOOKBACK_HOURS = int(os.getenv("NEWS_LOOKBACK_HOURS", "24"))
+NEWS_LOOKBACK_HOURS = _env_int("NEWS_LOOKBACK_HOURS", 24)
 SENT_NEWS_PATH = os.getenv("SENT_NEWS_PATH", "data/sent_news.json")
-SENT_NEWS_RETENTION_DAYS = int(os.getenv("SENT_NEWS_RETENTION_DAYS", "30"))
+SENT_NEWS_RETENTION_DAYS = _env_int("SENT_NEWS_RETENTION_DAYS", 30)
