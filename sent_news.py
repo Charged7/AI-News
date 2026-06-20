@@ -35,6 +35,7 @@ class SentNewsStore:
             return store
 
         data = json.loads(store.path.read_text(encoding="utf-8"))
+
         for raw_record in data.get("items", []):
             link = str(raw_record.get("link", "")).strip()
             sent_at = _parse_datetime(raw_record.get("sent_at"))
@@ -49,7 +50,7 @@ class SentNewsStore:
         return store
 
     def filter_unsent(self, items: Iterable[NewsItem]) -> list[NewsItem]:
-        """Повертає лише ті новини, яких ще немає в історії."""
+        """Повертає лише ті новини, яких ще немає в історії по link"""
         return [item for item in items if _link_key(item.link) not in self.records]
 
     def mark_sent(self, items: Iterable[NewsItem], now: datetime | None = None) -> None:
@@ -64,7 +65,7 @@ class SentNewsStore:
             )
 
     def prune(self, now: datetime | None = None) -> None:
-        """Видаляє старі записи, щоб JSON не ріс безмежно."""
+        """Переносить тільки нові записи у новий словник, а старі записи ні, щоб JSON не ріс безмежно."""
         cutoff = _as_utc(now or datetime.now(UTC)) - timedelta(days=self.retention_days)
         self.records = {
             link_key: record
@@ -75,7 +76,7 @@ class SentNewsStore:
     def save(self) -> None:
         """Зберігає історію на диск у передбачуваному JSON-форматі."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        records = sorted(self.records.values(), key=lambda record: record.sent_at, reverse=True)
+        records = sorted(self.records.values(), key=lambda record: record.sent_at, reverse=True) # сортуємо від найновішої до найстарішої
         data = {
             "items": [
                 {
@@ -87,6 +88,7 @@ class SentNewsStore:
                 for record in records
             ]
         }
+        # Записуємо з відступами для кращої читабельності
         self.path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 

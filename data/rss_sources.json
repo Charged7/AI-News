@@ -1,0 +1,235 @@
+{
+  "sources": [
+    {
+      "name": "BBC News Top Stories",
+      "url": "https://feeds.bbci.co.uk/news/rss.xml",
+      "category": "general",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "BBC News World",
+      "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+      "category": "world",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "BBC News Business",
+      "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
+      "category": "business",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "BBC News Technology",
+      "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+      "category": "technology",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "BBC Sport",
+      "url": "https://feeds.bbci.co.uk/sport/rss.xml",
+      "category": "sport",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "Al Jazeera All News",
+      "url": "https://www.aljazeera.com/xml/rss/all.xml",
+      "category": "world",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "The Guardian World",
+      "url": "https://www.theguardian.com/world/rss",
+      "category": "world",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "The Guardian Business",
+      "url": "https://www.theguardian.com/business/rss",
+      "category": "business",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "The Guardian Football",
+      "url": "https://www.theguardian.com/football/rss",
+      "category": "sport",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "NPR Top Stories",
+      "url": "https://feeds.npr.org/1001/rss.xml",
+      "category": "general",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "NPR World",
+      "url": "https://feeds.npr.org/1004/rss.xml",
+      "category": "world",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "France 24",
+      "url": "https://www.france24.com/en/rss",
+      "category": "world",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "DW News",
+      "url": "https://rss.dw.com/rdf/rss-en-all",
+      "category": "world",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "Politico Europe",
+      "url": "https://www.politico.eu/feed/",
+      "category": "politics",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "CNN Top Stories",
+      "url": "http://rss.cnn.com/rss/edition.rss",
+      "category": "general",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "CNN World",
+      "url": "http://rss.cnn.com/rss/edition_world.rss",
+      "category": "world",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "NBC News",
+      "url": "https://feeds.nbcnews.com/nbcnews/public/news",
+      "category": "general",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "PBS NewsHour World",
+      "url": "https://www.pbs.org/newshour/feeds/rss/world",
+      "category": "world",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "CNBC Top News",
+      "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "category": "business",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "CNBC Economy",
+      "url": "https://www.cnbc.com/id/20910258/device/rss/rss.html",
+      "category": "business",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "MarketWatch Top Stories",
+      "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+      "category": "business",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "Ars Technica",
+      "url": "https://feeds.arstechnica.com/arstechnica/index",
+      "category": "technology",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "MIT Technology Review",
+      "url": "https://www.technologyreview.com/feed/",
+      "category": "technology",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "WIRED",
+      "url": "https://www.wired.com/feed/rss",
+      "category": "technology",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "TechCrunch",
+      "url": "https://techcrunch.com/feed/",
+      "category": "technology",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "The Verge",
+      "url": "https://www.theverge.com/rss/index.xml",
+      "category": "technology",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "Engadget",
+      "url": "https://www.engadget.com/rss.xml",
+      "category": "technology",
+      "priority": "low",
+      "enabled": true
+    },
+    {
+      "name": "9to5Mac",
+      "url": "https://9to5mac.com/feed/",
+      "category": "technology",
+      "priority": "low",
+      "enabled": true
+    },
+    {
+      "name": "AppleInsider News",
+      "url": "https://appleinsider.com/rss/news/",
+      "category": "technology",
+      "priority": "low",
+      "enabled": true
+    },
+    {
+      "name": "Ukrainska Pravda",
+      "url": "https://www.pravda.com.ua/rss/",
+      "category": "ukraine",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "ESPN Top News",
+      "url": "https://www.espn.com/espn/rss/news",
+      "category": "sport",
+      "priority": "normal",
+      "enabled": true
+    },
+    {
+      "name": "UN News",
+      "url": "https://news.un.org/feed/subscribe/en/news/all/rss.xml",
+      "category": "global_institutions",
+      "priority": "high",
+      "enabled": true
+    },
+    {
+      "name": "ReliefWeb Updates",
+      "url": "https://reliefweb.int/updates/rss.xml",
+      "category": "crisis",
+      "priority": "normal",
+      "enabled": true
+    }
+  ]
+}

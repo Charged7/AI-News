@@ -1,4 +1,4 @@
-"""Тести для batch-логіки OpenAI та парсингу новинних summary."""
+"""Tests for OpenAI summary batching and resilient parsing."""
 
 from __future__ import annotations
 
@@ -17,8 +17,6 @@ from rss import NewsItem
 
 
 class AiTests(unittest.TestCase):
-    """Перевіряє, що AI повертає валідні summaries для новин і коректно падає на помилках."""
-
     def test_summarize_news_items_requires_api_key(self) -> None:
         item = NewsItem("Title", "<p>Description text.</p>", "https://example.test", None, "Source")
 
@@ -61,6 +59,18 @@ class AiTests(unittest.TestCase):
         self.assertEqual(openai_summary.call_args_list[1].args[0], [second])
         self.assertEqual(openai_summary.call_args_list[0].kwargs["max_tokens"], 123)
 
+    def test_summarize_news_items_fills_missing_batch_result_with_fallback(self) -> None:
+        first = NewsItem("First", "First text", "https://first.test", None, "Source")
+        second = NewsItem("Second", "Second text", "https://second.test", None, "Source")
+
+        with patch(
+            "ai._summarize_news_items_with_openai",
+            return_value={"https://first.test": AiNewsText("Перший", "Коротко про першу новину.")},
+        ):
+            result = summarize_news_items([first, second], api_key="test-key")
+
+        self.assertEqual(result["https://second.test"], AiNewsText("Second", "Second text"))
+
     def test_openai_request_uses_json_mode_and_rejects_truncation(self) -> None:
         item = NewsItem("Title", "<p>Description text.</p>", "https://example.test", None, "Source")
         create = MagicMock(
@@ -89,14 +99,35 @@ class AiTests(unittest.TestCase):
         self.assertEqual(request["response_format"], {"type": "json_object"})
         self.assertEqual(request["max_tokens"], 123)
 
-    def test_parse_ai_response_requires_title_and_summary(self) -> None:
+    def test_parse_ai_response_uses_fallback_for_incomplete_summary(self) -> None:
         item = NewsItem("Title", "<p>Description text.</p>", "https://example.test", None, "Source")
 
-        with self.assertRaises(AISummaryError):
-            _parse_ai_response(
-                '{"items":[{"link":"https://example.test","title_uk":"Заголовок"}]}',
-                [item],
-            )
+        result = _parse_ai_response(
+            '{"items":[{"link":"https://example.test","title_uk":"Заголовок"}]}',
+            [item],
+        )
+
+        self.assertEqual(result["https://example.test"], AiNewsText("Title", "Description text."))
+
+    def test_parse_ai_response_uses_fallback_for_omitted_item(self) -> None:
+        item = NewsItem("Title", "Description text.", "https://example.test", None, "Source")
+
+        result = _parse_ai_response('{"items":[]}', [item])
+
+        self.assertEqual(result["https://example.test"], AiNewsText("Title", "Description text."))
+
+    def test_parse_ai_response_can_match_by_short_item_id(self) -> None:
+        item = NewsItem("Original", "Description.", "https://example.test/full?query=1", None, "Source")
+
+        result = _parse_ai_response(
+            '{"items":[{"id":"item_1","title_uk":"Український заголовок","summary_uk":"Короткий опис."}]}',
+            [item],
+        )
+
+        self.assertEqual(
+            result["https://example.test/full?query=1"],
+            AiNewsText("Український заголовок", "Короткий опис."),
+        )
 
     def test_parse_ai_response_returns_translated_title_and_summary(self) -> None:
         item = NewsItem("Title", "<p>Description text.</p>", "https://example.test", None, "Source")

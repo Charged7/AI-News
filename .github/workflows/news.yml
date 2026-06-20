@@ -21,28 +21,34 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Send scheduled news cards
+      - name: Send important news cards
         env:
-          # Секрети для Telegram та OpenAI підтягуються з GitHub repository settings.
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
           OPENAI_SUMMARY_BATCH_SIZE: ${{ vars.OPENAI_SUMMARY_BATCH_SIZE }}
           OPENAI_SUMMARY_MAX_TOKENS: ${{ vars.OPENAI_SUMMARY_MAX_TOKENS }}
+          OPENAI_IMPACT_BATCH_SIZE: ${{ vars.OPENAI_IMPACT_BATCH_SIZE }}
+          OPENAI_IMPACT_MAX_TOKENS: ${{ vars.OPENAI_IMPACT_MAX_TOKENS }}
           NEWS_LOOKBACK_HOURS: ${{ vars.NEWS_LOOKBACK_HOURS }}
+          NEWS_MIN_IMPACT_SCORE: ${{ vars.NEWS_MIN_IMPACT_SCORE }}
+          NEWS_MAX_ITEMS_PER_RUN: ${{ vars.NEWS_MAX_ITEMS_PER_RUN }}
+          NEWS_SOURCES_PATH: ${{ vars.NEWS_SOURCES_PATH }}
+          NEWS_STATE_DB_PATH: ${{ vars.NEWS_STATE_DB_PATH }}
+          SENT_NEWS_PATH: ${{ vars.SENT_NEWS_PATH }}
+          PROCESSED_NEWS_PATH: ${{ vars.PROCESSED_NEWS_PATH }}
         run: python main.py
 
-      - name: Commit sent news history
+      - name: Commit news history
         if: always()
         run: |
-          # Комітимо історію тільки якщо JSON справді змінився.
-          if git diff --quiet -- data/sent_news.json; then
-            echo "No sent news history changes."
+          if [ -z "$(git status --short -- data/newsbot.db data/sent_news.json data/processed_news.json)" ]; then
+            echo "No news history changes."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/sent_news.json
-          git commit -m "Update sent news history"
+          git add -A -- data
+          git commit -m "Update news history"
           git push

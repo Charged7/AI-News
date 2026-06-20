@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import unittest
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
+from unittest.mock import patch
 
-from rss import NewsItem, deduplicate_news, extract_image, is_recent
+from config import RSSSource
+from rss import NewsItem, deduplicate_news, extract_image, fetch_recent_news, is_recent
 
 
 class RssTests(unittest.TestCase):
@@ -43,6 +46,36 @@ class RssTests(unittest.TestCase):
         unique = NewsItem("Unique", "Desc", "https://c.test", None, "C")
 
         self.assertEqual(deduplicate_news([first, duplicate_link, duplicate_title, unique]), [first, unique])
+
+    def test_fetch_recent_news_skips_broken_sources(self) -> None:
+        now = datetime(2026, 5, 20, 9, 0, tzinfo=UTC)
+        broken_feed = SimpleNamespace(entries=[], bozo=True, bozo_exception=RuntimeError("broken"))
+        working_feed = SimpleNamespace(
+            entries=[
+                {
+                    "title": "Major event",
+                    "link": "https://example.test/major",
+                    "summary": "Important text",
+                    "published_parsed": now.utctimetuple(),
+                }
+            ],
+            bozo=False,
+        )
+
+        with patch("rss.feedparser.parse", side_effect=[broken_feed, working_feed]):
+            items = fetch_recent_news(
+                [
+                    RSSSource("Broken", "https://broken.test/rss"),
+                    RSSSource("Working", "https://working.test/rss", category="world", priority="high"),
+                ],
+                lookback_hours=24,
+                now=now,
+            )
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].source, "Working")
+        self.assertEqual(items[0].source_category, "world")
+        self.assertEqual(items[0].source_priority, "high")
 
 
 if __name__ == "__main__":

@@ -34,6 +34,8 @@ class NewsItem:
     image: str | None
     source: str
     published_at: datetime | None = None
+    source_category: str = "general"
+    source_priority: str = "normal"
 
 
 def fetch_recent_news(
@@ -50,22 +52,47 @@ def fetch_recent_news(
 
     for source in sources:
         logger.info("Fetching RSS source: %s", source.name)
-        feed = feedparser.parse(source.url)
+        try:
+            feed = feedparser.parse(source.url)
+        except Exception as exc:
+            logger.warning("RSS source failed for %s: %s", source.name, exc)
+            continue
+
         entries = getattr(feed, "entries", [])
+        status = getattr(feed, "status", None)
+        try:
+            http_status = int(status or 0)
+        except (TypeError, ValueError):
+            http_status = 0
+        if http_status >= 400 and not entries:
+            logger.warning("RSS source returned HTTP %s for %s", http_status, source.name)
+            continue
+
         if getattr(feed, "bozo", False):
             logger.warning("RSS parser warning for %s: %s", source.name, getattr(feed, "bozo_exception", "unknown"))
             if not entries:
-                raise RuntimeError(f"Could not fetch or parse RSS source: {source.name}")
+                logger.warning("Skipping RSS source without entries: %s", source.name)
+                continue
 
         for entry in entries:
-            item = normalize_entry(entry, source.name)
+            item = normalize_entry(
+                entry,
+                source.name,
+                source_category=source.category,
+                source_priority=source.priority,
+            )
             if item and is_recent(item, lookback_hours, now_utc):
                 items.append(item)
 
     return sort_news(deduplicate_news(items))
 
 
-def normalize_entry(entry: Any, source_name: str) -> NewsItem | None:
+def normalize_entry(
+    entry: Any,
+    source_name: str,
+    source_category: str = "general",
+    source_priority: str = "normal",
+) -> NewsItem | None:
     """Перетворює сирий RSS entry на NewsItem або пропускає його, якщо даних замало."""
     title = clean_text(_entry_get(entry, "title", ""))
     link = str(_entry_get(entry, "link", "") or "").strip()
@@ -83,6 +110,8 @@ def normalize_entry(entry: Any, source_name: str) -> NewsItem | None:
         image=extract_image(entry),
         source=source_name,
         published_at=published_at,
+        source_category=source_category,
+        source_priority=source_priority,
     )
 
 
