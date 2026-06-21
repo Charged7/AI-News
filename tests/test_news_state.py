@@ -29,6 +29,43 @@ class NewsStateTests(unittest.TestCase):
             finally:
                 loaded.close()
 
+    def test_sent_items_store_recent_story_fingerprints(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "newsbot.db"
+            item = NewsItem(
+                "Vance arrives in Switzerland for US-Iran talks",
+                "Both nations seek a deal.",
+                "https://example.test/vance-switzerland-iran-talks",
+                None,
+                "Source",
+            )
+            store = NewsStateStore.load(db_path, retention_days=30)
+            try:
+                store.mark_sent([item], now=datetime(2026, 6, 20, 10, 0, tzinfo=UTC))
+                fingerprints = store.recent_story_fingerprints(
+                    hours=24,
+                    now=datetime(2026, 6, 20, 11, 0, tzinfo=UTC),
+                )
+
+                self.assertEqual(len(fingerprints), 1)
+                self.assertIn("vance", fingerprints[0])
+                self.assertIn("iran", fingerprints[0])
+            finally:
+                store.close()
+
+    def test_recent_story_fingerprints_respect_hours_window(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "newsbot.db"
+            item = NewsItem("Old event", "Text", "https://old.test/event", None, "Source")
+            now = datetime(2026, 6, 20, 10, 0, tzinfo=UTC)
+            store = NewsStateStore.load(db_path, retention_days=30)
+            try:
+                store.mark_sent([item], now=now - timedelta(hours=48))
+
+                self.assertEqual(store.recent_story_fingerprints(hours=24, now=now), [])
+            finally:
+                store.close()
+
     def test_prune_removes_old_records(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = Path(temp_dir) / "newsbot.db"

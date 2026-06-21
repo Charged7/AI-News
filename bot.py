@@ -20,6 +20,12 @@ from config import (
     PROCESSED_NEWS_PATH,
 )
 from impact_ai import ImpactClassificationError, select_important_news
+from news_dedup import (
+    NEWS_STORY_DEDUPE_HOURS,
+    NEWS_STORY_DEDUPE_THRESHOLD,
+    filter_duplicate_story_items,
+    link_key,
+)
 from news_pipeline import limit_candidates
 from news_state import NewsStateStore
 from rss import NewsItem, fetch_recent_news
@@ -68,11 +74,29 @@ def run_news_cycle(client: TelegramClient | None = None) -> int:
             return 0
 
         summaries = summarize_news_items(important_items)
+        deduplication = filter_duplicate_story_items(
+            important_items,
+            summaries,
+            existing_fingerprints=state_store.recent_story_fingerprints(
+                hours=NEWS_STORY_DEDUPE_HOURS
+            ),
+            threshold=NEWS_STORY_DEDUPE_THRESHOLD,
+        )
+        important_items = deduplication.unique_items
+        for duplicate_item in deduplication.duplicate_items:
+            logger.info("Skipping duplicate story from %s: %s", duplicate_item.source, duplicate_item.title)
+
+        if not important_items:
+            state_store.mark_processed(candidates)
+            state_store.prune()
+            logger.info("No new high-impact stories to send after deduplication.")
+            return 0
+
         telegram_client = client or TelegramClient()
         sent_count = 0
 
         for item in important_items:
-            _send_one_item(telegram_client, state_store, item, summaries[item.link.strip().lower()])
+            _send_one_item(telegram_client, state_store, item, summaries[link_key(item.link)])
             sent_count += 1
 
         state_store.mark_processed(candidates)
@@ -111,7 +135,7 @@ def _send_one_item(
 ) -> None:
     """Send and persist one item immediately after successful delivery."""
     client.send_news_item(item, summary)
-    state_store.mark_sent([item])
+    state_store.mark_sent([item], summaries={link_key(item.link): summary})
     state_store.prune()
 
 

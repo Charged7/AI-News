@@ -7,8 +7,9 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Mapping
 
+from news_dedup import build_story_fingerprint
 from rss import NewsItem
 
 
@@ -54,11 +55,61 @@ class NewsStateStore:
     def filter_unprocessed(self, items: Iterable[NewsItem]) -> list[NewsItem]:
         return self._filter_missing(items, table="processed_news")
 
-    def mark_sent(self, items: Iterable[NewsItem], now: datetime | None = None) -> None:
-        self._upsert_items(items, table="sent_news", timestamp_column="sent_at", now=now)
+    def mark_sent(
+        self,
+        items: Iterable[NewsItem],
+        now: datetime | None = None,
+        summaries: Mapping[str, object] | None = None,
+    ) -> None:
+        self._upsert_items(
+            items,
+            table="sent_news",
+            timestamp_column="sent_at",
+            now=now,
+            summaries=summaries,
+        )
 
     def mark_processed(self, items: Iterable[NewsItem], now: datetime | None = None) -> None:
         self._upsert_items(items, table="processed_news", timestamp_column="processed_at", now=now)
+
+    def recent_story_fingerprints(
+        self,
+        hours: int | None = None,
+        now: datetime | None = None,
+    ) -> list[str]:
+        """Return recent story fingerprints for cross-source duplicate suppression."""
+        params: tuple[str, ...] = ()
+        where_clause = ""
+        if hours is not None and hours > 0:
+            cutoff = (_as_utc(now or datetime.now(UTC)) - timedelta(hours=hours)).isoformat()
+            where_clause = "WHERE sent_at >= ?"
+            params = (cutoff,)
+
+        rows = self.connection.execute(
+            f"""
+            SELECT link, title, source, story_fingerprint
+            FROM sent_news
+            {where_clause}
+            """,
+            params,
+        ).fetchall()
+
+        fingerprints: list[str] = []
+        for link, title, source, story_fingerprint in rows:
+            fingerprint = str(story_fingerprint or "").strip()
+            if not fingerprint:
+                fingerprint = build_story_fingerprint(
+                    NewsItem(
+                        title=str(title or ""),
+                        description="",
+                        link=str(link or ""),
+                        image=None,
+                        source=str(source or ""),
+                    )
+                )
+            if fingerprint:
+                fingerprints.append(fingerprint)
+        return fingerprints
 
     def prune(self, now: datetime | None = None) -> None:
         cutoff = (_as_utc(now or datetime.now(UTC)) - timedelta(days=self.retention_days)).isoformat()
@@ -77,7 +128,8 @@ class NewsStateStore:
                     link TEXT PRIMARY KEY,
                     title TEXT NOT NULL,
                     source TEXT NOT NULL,
-                    sent_at TEXT NOT NULL
+                    sent_at TEXT NOT NULL,
+                    story_fingerprint TEXT
                 )
                 """
             )
@@ -94,9 +146,18 @@ class NewsStateStore:
             self.connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_sent_news_sent_at ON sent_news(sent_at)"
             )
+            self._ensure_column("sent_news", "story_fingerprint", "TEXT")
             self.connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_processed_news_processed_at ON processed_news(processed_at)"
             )
+
+    def _ensure_column(self, table: str, column: str, definition: str) -> None:
+        columns = {
+            str(row[1])
+            for row in self.connection.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+        if column not in columns:
+            self.connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def _filter_missing(self, items: Iterable[NewsItem], table: str) -> list[NewsItem]:
         return [
@@ -115,27 +176,48 @@ class NewsStateStore:
         table: str,
         timestamp_column: str,
         now: datetime | None = None,
+        summaries: Mapping[str, object] | None = None,
     ) -> None:
         timestamp = _as_utc(now or datetime.now(UTC)).isoformat()
         rows = [
-            (_link_key(item.link), item.title, item.source, timestamp)
+            (
+                _link_key(item.link),
+                item.title,
+                item.source,
+                timestamp,
+                build_story_fingerprint(item, _summary_for_item(item, summaries)),
+            )
             for item in items
         ]
         if not rows:
             return
 
         with self.connection:
-            self.connection.executemany(
-                f"""
-                INSERT INTO {table} (link, title, source, {timestamp_column})
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(link) DO UPDATE SET
-                    title = excluded.title,
-                    source = excluded.source,
-                    {timestamp_column} = excluded.{timestamp_column}
-                """,
-                rows,
-            )
+            if table == "sent_news":
+                self.connection.executemany(
+                    f"""
+                    INSERT INTO sent_news (link, title, source, {timestamp_column}, story_fingerprint)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(link) DO UPDATE SET
+                        title = excluded.title,
+                        source = excluded.source,
+                        {timestamp_column} = excluded.{timestamp_column},
+                        story_fingerprint = excluded.story_fingerprint
+                    """,
+                    rows,
+                )
+            else:
+                self.connection.executemany(
+                    f"""
+                    INSERT INTO {table} (link, title, source, {timestamp_column})
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(link) DO UPDATE SET
+                        title = excluded.title,
+                        source = excluded.source,
+                        {timestamp_column} = excluded.{timestamp_column}
+                    """,
+                    [row[:4] for row in rows],
+                )
 
     def _has_rows(self, table: str) -> bool:
         row = self.connection.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone()
@@ -177,6 +259,15 @@ class NewsStateStore:
 
 def _link_key(link: str) -> str:
     return link.strip().lower()
+
+
+def _summary_for_item(
+    item: NewsItem,
+    summaries: Mapping[str, object] | None,
+) -> object | None:
+    if not summaries:
+        return None
+    return summaries.get(_link_key(item.link))
 
 
 def _parse_datetime(value: object) -> datetime | None:

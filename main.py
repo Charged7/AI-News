@@ -16,6 +16,12 @@ from config import (
     PROCESSED_NEWS_PATH,
 )
 from impact_ai import ImpactClassificationError, select_important_news
+from news_dedup import (
+    NEWS_STORY_DEDUPE_HOURS,
+    NEWS_STORY_DEDUPE_THRESHOLD,
+    filter_duplicate_story_items,
+    link_key,
+)
 from news_pipeline import limit_candidates
 from news_state import NewsStateStore
 from rss import fetch_recent_news
@@ -79,9 +85,27 @@ def main() -> int:
         client = TelegramClient()
         try:
             summaries = summarize_news_items(items)
+            deduplication = filter_duplicate_story_items(
+                items,
+                summaries,
+                existing_fingerprints=state_store.recent_story_fingerprints(
+                    hours=NEWS_STORY_DEDUPE_HOURS
+                ),
+                threshold=NEWS_STORY_DEDUPE_THRESHOLD,
+            )
+            items = deduplication.unique_items
+            for duplicate_item in deduplication.duplicate_items:
+                logger.info("Skipping duplicate story from %s: %s", duplicate_item.source, duplicate_item.title)
+
+            if not items:
+                state_store.mark_processed(candidates)
+                state_store.prune()
+                logger.info("No new high-impact stories to send after deduplication.")
+                return 0
+
             for item in items:
-                client.send_news_item(item, summaries[item.link.strip().lower()])
-                state_store.mark_sent([item])
+                client.send_news_item(item, summaries[link_key(item.link)])
+                state_store.mark_sent([item], summaries={link_key(item.link): summaries[link_key(item.link)]})
                 state_store.prune()
         except AISummaryError:
             logger.exception("AI summary generation failed.")

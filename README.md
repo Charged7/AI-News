@@ -19,7 +19,9 @@ flowchart TD
     State1 --> Impact["impact_ai.py OpenAI high-impact classifier"]
     Impact --> Important["important items only"]
     Important --> Summary["ai.py OpenAI Ukrainian title + summary"]
-    Summary --> Telegram["telegram.py sendPhoto/sendMessage"]
+    Summary --> StoryDedupe["news_dedup.py story-level duplicate filter"]
+    StoryDedupe --> Telegram["telegram.py sendPhoto/sendMessage"]
+    StoryDedupe --> Duplicate["skip duplicate story + mark processed"]
     Telegram --> State2["mark sent + processed in SQLite"]
     Impact --> Rejected["mark low-impact candidates processed"]
 ```
@@ -72,6 +74,8 @@ OPENAI_API_KEY=...
 - `NEWS_MAX_CANDIDATES_PER_RUN` — максимум RSS-кандидатів, які OpenAI класифікує за один цикл; `0` означає без ліміту, default `36`;
 - `NEWS_MAX_ITEMS_PER_RUN` — максимум відправок за цикл; `0` означає без ліміту, default `0`;
 - `NEWS_POLL_INTERVAL_SECONDS` — пауза між циклами `bot.py`, default `300`;
+- `NEWS_STORY_DEDUPE_HOURS` — recent window for suppressing duplicate stories from different sources, default `36`;
+- `NEWS_STORY_DEDUPE_THRESHOLD` — similarity threshold for story-level duplicate detection, default `0.45`;
 - `OPENAI_IMPACT_BATCH_SIZE` — batch size для impact classification, default `6`;
 - `OPENAI_IMPACT_MAX_TOKENS` — max tokens для impact classification, default `5000`.
 - `OPENAI_IMPACT_RETRY_MISSING_LIMIT` — скільки пропущених OpenAI batch-рішень повторювати окремими запитами; default `0`.
@@ -99,6 +103,7 @@ python main.py
 - `AI impact rejected (...)` — новина визнана недостатньо важливою;
 - `OpenAI omitted ... retry is disabled...` — OpenAI не повернув частину batch-рішень, бот не робить дорогі retry й відхиляє їх консервативно;
 - `OpenAI omitted summary; using fallback summary...` — OpenAI не повернув summary для однієї важливої новини, бот використав fallback з оригінального title/description;
+- `Skipping duplicate story from ...` — story-level dedupe found that another source already covered the same event;
 - `No high-impact news items to send.` — новини були, але нічого достатньо важливого;
 - `Sent N high-impact news item(s).` — успішна відправка в `bot.py`.
 
@@ -106,7 +111,7 @@ python main.py
 
 SQLite тепер головне сховище стану. Таблиці:
 
-- `sent_news` — лінки, які вже були відправлені;
+- `sent_news` — лінки, які вже були відправлені; additionally stores `story_fingerprint` for duplicate-story suppression;
 - `processed_news` — лінки, які вже були класифіковані, але могли бути відхилені як low-impact.
 
 При першому запуску `news_state.py` автоматично імпортує старий `sent_news.json` / `processed_news.json`, якщо SQLite-таблиці ще порожні. Після цього JSON-файли більше не є основною пам’яттю бота.

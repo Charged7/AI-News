@@ -22,7 +22,7 @@ class FakeStateStore:
     def filter_unprocessed(self, items: list[NewsItem]) -> list[NewsItem]:
         return items
 
-    def mark_sent(self, items: list[NewsItem]) -> None:
+    def mark_sent(self, items: list[NewsItem], **kwargs: object) -> None:
         self.sent.extend(items)
 
     def mark_processed(self, items: list[NewsItem]) -> None:
@@ -30,6 +30,9 @@ class FakeStateStore:
 
     def prune(self) -> None:
         return None
+
+    def recent_story_fingerprints(self, **kwargs: object) -> list[str]:
+        return []
 
     def close(self) -> None:
         return None
