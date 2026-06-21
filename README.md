@@ -40,7 +40,7 @@ flowchart TD
 ├── config.py              # env vars + завантаження source catalog
 ├── data/
 │   ├── rss_sources.json   # каталог RSS-джерел
-│   ├── newsbot.db         # runtime SQLite DB, створюється автоматично
+│   ├── newsbot.db         # runtime SQLite DB, створюється автоматично і не комітиться
 │   └── sent_news.json     # legacy import зі старої архітектури
 └── tests/
 ```
@@ -111,6 +111,8 @@ SQLite тепер головне сховище стану. Таблиці:
 
 При першому запуску `news_state.py` автоматично імпортує старий `sent_news.json` / `processed_news.json`, якщо SQLite-таблиці ще порожні. Після цього JSON-файли більше не є основною пам’яттю бота.
 
+`data/newsbot.db` є runtime-файлом і ігнорується git. На VPS його потрібно берегти як локальний state: якщо видалити цей файл, бот втратить історію `sent_news` / `processed_news` після останнього імпорту legacy JSON.
+
 ## RSS-джерела
 
 Каталог лежить у `data/rss_sources.json`. Щоб вимкнути джерело, постав:
@@ -139,4 +141,4 @@ SQLite тепер головне сховище стану. Таблиці:
 
 `.github/workflows/news.yml` лишається ручним fallback через `workflow_dispatch`. Основний runtime має бути VPS, бо тільки він дає часті перевірки й near-real-time відправку.
 
-Fallback запускає `main.py` і комітить зміни в `data/`, якщо SQLite state змінився. Не тримай одночасно активними VPS-процес і регулярний GitHub Actions scheduler, інакше можливі дублікати або гонки стану.
+Fallback запускає `main.py`, але не комітить SQLite state назад у репозиторій. Не тримай одночасно активними VPS-процес і регулярний GitHub Actions scheduler, інакше можливі дублікати або гонки стану.
