@@ -28,6 +28,7 @@ from news_dedup import (
 )
 from news_pipeline import limit_candidates
 from news_state import NewsStateStore
+from preference_scoring import preference_score
 from rss import NewsItem, fetch_recent_news
 from telegram import TelegramClient
 
@@ -62,17 +63,27 @@ def run_news_cycle(client: TelegramClient | None = None) -> int:
             return 0
         candidates = limit_candidates(candidates, NEWS_MAX_CANDIDATES_PER_RUN)
 
-        important_items = select_important_news(
+        impact_result = select_important_news(
             candidates,
             min_score=NEWS_MIN_IMPACT_SCORE,
             max_items=NEWS_MAX_ITEMS_PER_RUN,
         )
+
+        important_items = impact_result.items
+        decisions = impact_result.decisions
+
         if not important_items:
             state_store.mark_processed(candidates)
             state_store.prune()
             logger.info("No high-impact news items to send.")
             return 0
 
+        important_items.sort(
+            key=lambda item: preference_score(
+                decisions[link_key(item.link)]
+            ),
+            reverse=True,
+        )
         summaries = summarize_news_items(important_items)
         deduplication = filter_duplicate_story_items(
             important_items,

@@ -1,0 +1,17 @@
+{
+  "topic_weights": {
+    "llm": 30,
+    "ai": 20,
+    "technology": 10,
+
+    "ukraine": 15,
+    "russia": 10,
+
+    "earthquake": -20,
+    "natural_disaster": -10,
+
+    "israel_gaza": -25,
+
+    "sports": -5
+  }
+}

@@ -35,13 +35,24 @@ class ImpactDecision:
     is_important: bool
     impact_score: int
     impact_level: str
+
     category: str
     event_type: str
+
+    country: str
+    topics: tuple[str, ...]
+
     scope: str
     reason_uk: str
 
 
-IMPACT_SYSTEM_PROMPT = """
+@dataclass(frozen=True)
+class ImpactSelection:
+    items: list[NewsItem]
+    decisions: dict[str, ImpactDecision]
+
+
+IMPACT_SYSTEM_PROMPT = ("""
 Ти редактор важливих світових новин для Telegram-alerts.
 Твоє завдання: визначити, чи варто надсилати кожну RSS-новину користувачу негайно.
 
@@ -66,11 +77,47 @@ IMPACT_SYSTEM_PROMPT = """
 - 0-59: не надсилати.
 
 Поверни тільки валідний JSON без markdown.
-Формат:
-{"items":[{"id":"item_1","link":"...","is_important":true,"impact_score":85,"impact_level":"high","category":"politics","event_type":"geopolitical_escalation","scope":"global","reason_uk":"..."}]}
-""".strip()
 
-IMPACT_USER_PROMPT_TEMPLATE = """
+Також визнач:
+
+country:
+Головна країна або регіон новини.
+
+Приклади:
+ukraine
+russia
+usa
+china
+israel
+gaza
+venezuela
+global
+
+topics:
+Масив тем новини.
+
+Можливі значення:
+ai
+llm
+technology
+ukraine
+russia
+war
+politics
+economy
+earthquake
+natural_disaster
+israel_gaza
+science
+business
+sports
+other
+
+Формат:
+{"items":[{"id":"item_1","link":"...","is_important":true,"impact_score":85,"impact_level":"high","category":"politics","event_type":"geopolitical_escalation","country":"ukraine","topics":["war","ukraine"],"scope":"global","reason_uk":"..."}]}"""
+.strip())
+
+IMPACT_USER_PROMPT_TEMPLATE = ("""
 Оціни важливість цих RSS-новин:
 {items}
 
@@ -78,8 +125,16 @@ IMPACT_USER_PROMPT_TEMPLATE = """
 Не пропускай rejected/low-impact items. Використовуй точне значення ID з input.
 
 Поверни JSON у форматі:
-{{"items":[{{"id":"item_1","link":"...","is_important":true,"impact_score":85,"impact_level":"high","category":"politics","event_type":"geopolitical_escalation","scope":"global","reason_uk":"..."}}]}}
-""".strip()
+{{"items":[{{"id":"item_1","link":"...","is_important":true,
+"impact_score":85,
+"impact_level":"high",
+"category":"politics",
+"event_type":"geopolitical_escalation",
+"country":"ukraine",
+"topics":["war","ukraine"],
+"scope":"global",
+"reason_uk":"..."}}]}}"""
+.strip())
 
 
 def select_important_news(
@@ -90,7 +145,7 @@ def select_important_news(
     max_items: int = NEWS_MAX_ITEMS_PER_RUN,
     batch_size: int = OPENAI_IMPACT_BATCH_SIZE,
     max_tokens: int = OPENAI_IMPACT_MAX_TOKENS,
-) -> list[NewsItem]:
+) -> ImpactSelection:
     """Classify news with OpenAI and return items worth sending."""
     item_list = list(items)
     decisions = classify_news_importance(
@@ -133,7 +188,12 @@ def select_important_news(
                 item.title,
             )
 
-    return selected[:max_items] if max_items > 0 else selected
+    selected = selected[:max_items] if max_items > 0 else selected
+
+    return ImpactSelection(
+        items=selected,
+        decisions=decisions,
+    )
 
 
 def classify_news_importance(
@@ -302,6 +362,12 @@ def _parse_impact_response(
             impact_level=str(entry.get("impact_level", "")).strip() or _impact_level(score),
             category=str(entry.get("category", "")).strip() or "general",
             event_type=str(entry.get("event_type", "")).strip() or "unknown",
+            country=str(entry.get("country", "")).strip().lower(),
+            topics = tuple(
+                str(x).strip().lower()
+                for x in entry.get("topics", [])
+                if str(x).strip()
+            ),
             scope=str(entry.get("scope", "")).strip() or "unknown",
             reason_uk=str(entry.get("reason_uk", "")).strip() or "Без пояснення.",
         )
@@ -353,6 +419,10 @@ def _fallback_rejected_decision(item: NewsItem) -> ImpactDecision:
         impact_level="low",
         category=item.source_category or "general",
         event_type="unclassified",
+
+        country="unknown",
+        topics=(),
+
         scope="unknown",
         reason_uk="OpenAI не повернув класифікацію після повторної спроби.",
     )
