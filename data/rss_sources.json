@@ -197,13 +197,6 @@
       "enabled": true
     },
     {
-      "name": "UN News",
-      "url": "https://news.un.org/feed/subscribe/en/news/all/rss.xml",
-      "category": "global_institutions",
-      "priority": "high",
-      "enabled": true
-    },
-    {
       "name": "ReliefWeb Updates",
       "url": "https://reliefweb.int/updates/rss.xml",
       "category": "crisis",

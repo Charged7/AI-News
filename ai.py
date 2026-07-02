@@ -30,6 +30,7 @@ class AiNewsText:
 
     title: str
     summary: str
+    event_key: str = ""
 
 
 def summarize_news_items(
@@ -140,6 +141,9 @@ def _parse_ai_response(content: str | None, items: Iterable[NewsItem]) -> dict[s
 
         title = str(entry.get("title_uk", "")).strip()
         summary = str(entry.get("summary_uk", "")).strip()
+        event_key = str(
+            entry.get("event_key", "")
+        ).strip().lower()
         if not title or not summary:
             if item is None:
                 logger.warning("OpenAI returned incomplete summary for unknown item; skipping it.")
@@ -148,7 +152,7 @@ def _parse_ai_response(content: str | None, items: Iterable[NewsItem]) -> dict[s
             summaries[_link_key(link)] = _fallback_summary(item)
             continue
 
-        summaries[_link_key(link)] = AiNewsText(title=title, summary=summary)
+        summaries[_link_key(link)] = AiNewsText(title=title, summary=summary, event_key=event_key)
 
     for item in _missing_summary_items(item_list, summaries):
         logger.warning("OpenAI omitted summary; using fallback summary: %s", item.link)

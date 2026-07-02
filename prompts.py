@@ -6,25 +6,66 @@ from rss import NewsItem
 
 SUMMARY_TEXT_MAX_CHARS = 900
 
+# OPENAI_NEWS_SYSTEM_PROMPT = """
+# Ти редактор новинної стрічки.
+# Для кожної новини переклади заголовок українською та створи короткий summary українською в 1-4 речення.
+# Збережи порядок новин.
+# Не вигадуй фактів. Не додавай жодних emoji, нумерацію, посилання, дати, зображення чи додаткові коментарі.
+# Поверни тільки валідний JSON без markdown.
+# Формат відповіді:
+# {"items":[{"id":"item_1","link":"...","title_uk":"...","summary_uk":"...", "event_key": "earthquake venezuela caracas"}]}
+# """.strip()
+
 OPENAI_NEWS_SYSTEM_PROMPT = """
 Ти редактор новинної стрічки.
-Для кожної новини переклади заголовок українською та створи короткий summary українською в 1-2 речення.
-Збережи порядок новин.
-Не вигадуй фактів. Не додавай жодних emoji, нумерацію, посилання, дати, зображення чи додаткові коментарі.
-Поверни тільки валідний JSON без markdown.
-Формат відповіді:
-{"items":[{"id":"item_1","link":"...","title_uk":"...","summary_uk":"..."}]}
-""".strip()
+
+Для кожної новини:
+1. Переклади заголовок українською.
+2. Створи короткий summary українською в 1-4 речення.
+3. Створи event_key — короткий канонічний опис події англійською мовою, 3-10 слів, без розділових знаків.
+
+Приклади event_key:
+- earthquake venezuela caracas
+- trump iran talks
+- wildfire california
+- plane crash india
+
+Поверни тільки валідний JSON.
+
+Формат:
+{
+  "items":[
+    {
+      "id":"item_1",
+      "link":"...",
+      "title_uk":"...",
+      "summary_uk":"...",
+      "event_key":"..."
+    }
+  ]
+}
+"""
 
 OPENAI_NEWS_USER_PROMPT_TEMPLATE = """
 Потрібно опрацювати такі новини:
+
 {items}
 
-Для кожного input ID поверни рівно один JSON object. Використовуй точне значення ID з input.
+Для кожного input ID поверни рівно один JSON object.
 
-Поверни JSON у форматі: {{"items":[{{"id":"item_1","link":"...","title_uk":"...","summary_uk":"..."}}]}}
+Поверни JSON у форматі:
+{
+  "items":[
+    {
+      "id":"item_1",
+      "link":"...",
+      "title_uk":"...",
+      "summary_uk":"...",
+      "event_key":"..."
+    }
+  ]
+}
 """.strip()
-
 
 def build_openai_messages(items: list[NewsItem]) -> list[dict[str, str]]:
     """Build messages for one OpenAI summary request."""

@@ -7,6 +7,7 @@ import os
 from dataclasses import dataclass
 from typing import Iterable, Mapping
 from urllib.parse import unquote, urlparse
+from semantic_dedup import similarity
 
 from rss import NewsItem, clean_text
 
@@ -106,6 +107,7 @@ def build_story_fingerprint(item: NewsItem, summary: object | None = None) -> st
     if summary is not None:
         parts.append(str(getattr(summary, "title", "") or ""))
         parts.append(str(getattr(summary, "summary", "") or ""))
+        parts.append(str(getattr(summary, "event_key", "") or ""))
 
     parts.extend([item.title, item.description, _link_text(item.link)])
     return " ".join(sorted(_tokenize_story_text(" ".join(parts))))
@@ -127,21 +129,24 @@ def are_similar_stories(
     second_fingerprint: str,
     threshold: float = NEWS_STORY_DEDUPE_THRESHOLD,
 ) -> bool:
-    """Return True when two fingerprints likely describe the same news event."""
+
     first_tokens = set(first_fingerprint.split())
     second_tokens = set(second_fingerprint.split())
+
     if not first_tokens or not second_tokens:
         return False
 
     common_count = len(first_tokens & second_tokens)
-    if common_count < MIN_COMMON_STORY_TOKENS:
-        return False
 
-    overlap = common_count / min(len(first_tokens), len(second_tokens))
-    jaccard = common_count / len(first_tokens | second_tokens)
-    if common_count >= STRONG_COMMON_STORY_TOKENS and overlap >= threshold - 0.12:
+    if common_count >= 5:
         return True
-    return overlap >= threshold or jaccard >= max(0.30, threshold - 0.15)
+
+    semantic_score = similarity(
+        first_fingerprint,
+        second_fingerprint,
+    )
+
+    return semantic_score >= 0.88
 
 
 def link_key(link: str) -> str:
