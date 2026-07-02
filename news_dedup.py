@@ -7,7 +7,6 @@ import os
 from dataclasses import dataclass
 from typing import Iterable, Mapping
 from urllib.parse import unquote, urlparse
-from semantic_dedup import similarity
 
 from rss import NewsItem, clean_text
 
@@ -138,15 +137,15 @@ def are_similar_stories(
 
     common_count = len(first_tokens & second_tokens)
 
-    if common_count >= 5:
+    if common_count >= STRONG_COMMON_STORY_TOKENS:
         return True
 
-    semantic_score = similarity(
-        first_fingerprint,
-        second_fingerprint,
+    similarity = common_count / max(
+        min(len(first_tokens), len(second_tokens)),
+        1,
     )
 
-    return semantic_score >= 0.88
+    return similarity >= threshold
 
 
 def link_key(link: str) -> str:
