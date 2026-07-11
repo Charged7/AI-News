@@ -1,4 +1,4 @@
-"""Manual one-shot entry point: RSS -> AI impact -> AI summary -> Telegram."""
+"""Manual one-shot entry point: RSS -> AI relevance -> summary -> Telegram."""
 
 import logging
 import sys
@@ -8,14 +8,13 @@ from config import (
     NEWS_LOOKBACK_HOURS,
     NEWS_MAX_CANDIDATES_PER_RUN,
     NEWS_MAX_ITEMS_PER_RUN,
-    NEWS_MIN_IMPACT_SCORE,
+    NEWS_MIN_RELEVANCE_SCORE,
     NEWS_STATE_DB_PATH,
     RSS_SOURCES,
     SENT_NEWS_PATH,
     SENT_NEWS_RETENTION_DAYS,
     PROCESSED_NEWS_PATH,
 )
-from impact_ai import ImpactClassificationError, select_important_news
 from news_dedup import (
     NEWS_STORY_DEDUPE_HOURS,
     NEWS_STORY_DEDUPE_THRESHOLD,
@@ -24,6 +23,8 @@ from news_dedup import (
 )
 from news_pipeline import limit_candidates
 from news_state import NewsStateStore
+from preferences import PreferencesError, load_news_preferences, preferences_fingerprint
+from relevance_ai import RelevanceClassificationError, select_relevant_news
 from rss import fetch_recent_news
 from telegram import TelegramClient
 
@@ -48,6 +49,13 @@ def main() -> int:
         logger.exception("RSS fetching failed.")
         return 1
 
+    try:
+        preferences = load_news_preferences()
+    except PreferencesError:
+        logger.exception("News preference profile loading failed.")
+        return 1
+    profile_key = preferences_fingerprint(preferences)
+
     state_store = NewsStateStore.load(
         NEWS_STATE_DB_PATH,
         SENT_NEWS_RETENTION_DAYS,
@@ -60,26 +68,31 @@ def main() -> int:
             logger.info("No new news items to send.")
             return 0
 
-        candidates = state_store.filter_unprocessed(items)
+        candidates = state_store.filter_unprocessed(items, profile_key=profile_key)
         if not candidates:
             logger.info("No new unclassified news items.")
             return 0
         candidates = limit_candidates(candidates, NEWS_MAX_CANDIDATES_PER_RUN)
 
         try:
-            items = select_important_news(
+            selection = select_relevant_news(
                 candidates,
-                min_score=NEWS_MIN_IMPACT_SCORE,
+                preferences=preferences,
+                min_score=NEWS_MIN_RELEVANCE_SCORE,
                 max_items=NEWS_MAX_ITEMS_PER_RUN,
             )
-        except ImpactClassificationError:
-            logger.exception("AI impact classification failed.")
+            items = selection.items
+        except RelevanceClassificationError:
+            logger.exception("AI relevance classification failed.")
             return 1
 
         if not items:
-            state_store.mark_processed(candidates)
+            state_store.mark_processed(
+                selection.processed_candidates(candidates),
+                profile_key=profile_key,
+            )
             state_store.prune()
-            logger.info("No high-impact news items to send.")
+            logger.info("No news items matched the preference profile.")
             return 0
 
         client = TelegramClient()
@@ -98,14 +111,23 @@ def main() -> int:
                 logger.info("Skipping duplicate story from %s: %s", duplicate_item.source, duplicate_item.title)
 
             if not items:
-                state_store.mark_processed(candidates)
+                state_store.mark_processed(
+                    selection.processed_candidates(candidates),
+                    profile_key=profile_key,
+                )
                 state_store.prune()
-                logger.info("No new high-impact stories to send after deduplication.")
+                logger.info("No new matching stories to send after deduplication.")
                 return 0
 
             for item in items:
-                client.send_news_item(item, summaries[link_key(item.link)])
-                state_store.mark_sent([item], summaries={link_key(item.link): summaries[link_key(item.link)]})
+                key = link_key(item.link)
+                client.send_news_item(item, summaries[key])
+                state_store.mark_sent(
+                    [item],
+                    summaries={key: summaries[key]},
+                    decisions={key: selection.decisions[key]},
+                    profile_key=profile_key,
+                )
                 state_store.prune()
         except AISummaryError:
             logger.exception("AI summary generation failed.")
@@ -114,7 +136,10 @@ def main() -> int:
             logger.exception("Telegram sending failed.")
             return 1
 
-        state_store.mark_processed(candidates)
+        state_store.mark_processed(
+            selection.processed_candidates(candidates),
+            profile_key=profile_key,
+        )
         state_store.prune()
 
         logger.info("Sent %s news item(s).", len(items))

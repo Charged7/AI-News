@@ -1,95 +1,136 @@
 # AI Telegram News Bot
 
-Telegram-бот для near-real-time high-impact новин. Основний режим роботи: постійний процес на VPS (`bot.py`), який часто читає RSS-джерела, просить OpenAI оцінити вагу кожної новини, підсумовує тільки важливі матеріали й надсилає кожну важливу новину окремою Telegram-карткою.
+Telegram-бот для персоналізованих новин. Він читає RSS-джерела, порівнює кожну
+новину з профілем користувача через OpenAI, підсумовує лише релевантні матеріали
+українською і надсилає їх окремими Telegram-картками.
 
-`main.py` лишається ручним one-shot fallback для перевірки або запуску через GitHub Actions.
+Основний режим — постійний процес `bot.py`. `main.py` запускає один повний цикл
+для ручної перевірки або зовнішнього scheduler.
 
 ## Як працює pipeline
 
 ```mermaid
 flowchart TD
-    VPS["VPS / systemd service"] --> Bot["bot.py long-running loop"]
-    Manual["manual run / GitHub Actions"] --> Main["main.py one-shot cycle"]
-    Bot --> RSS["rss.py fetch_recent_news"]
+    Service["VPS / systemd service"] --> Bot["bot.py: постійний цикл"]
+    Manual["Ручний запуск / scheduler"] --> Main["main.py: один цикл"]
+    Profile["data/user_preferences.md"] --> Loader["preferences.py: profile + fingerprint"]
+    Sources["data/rss_sources.json"] --> RSS["rss.py: fetch + normalize"]
+    Bot --> RSS
     Main --> RSS
-    Sources["data/rss_sources.json"] --> Config["config.py RSS_SOURCES"]
-    Config --> RSS
-    RSS --> Items["normalized NewsItem list"]
-    Items --> State1["SQLite data/newsbot.db filter sent + processed"]
-    State1 --> Impact["impact_ai.py OpenAI high-impact classifier"]
-    Impact --> Important["important items only"]
-    Important --> Summary["ai.py OpenAI Ukrainian title + summary"]
-    Summary --> StoryDedupe["news_dedup.py story-level duplicate filter"]
-    StoryDedupe --> Telegram["telegram.py sendPhoto/sendMessage"]
-    StoryDedupe --> Duplicate["skip duplicate story + mark processed"]
-    Telegram --> State2["mark sent + processed in SQLite"]
-    Impact --> Rejected["mark low-impact candidates processed"]
+    RSS --> StateFilter["news_state.py: unsent + unprocessed for profile"]
+    Loader --> StateFilter
+    StateFilter --> Relevance["relevance_ai.py + OpenAI: relevance + importance"]
+    Relevance -->|"relevance >= threshold"| Summary["ai.py: український title + summary"]
+    Relevance -->|"reject / missing decision"| Processed["SQLite: mark processed for profile"]
+    Summary --> Dedupe["news_dedup.py: story-level dedupe"]
+    Dedupe --> Telegram["telegram.py: sendPhoto / sendMessage"]
+    Telegram --> Sent["SQLite: sent + scores + topics + reason"]
+    Dedupe -->|"duplicate"| Processed
 ```
 
-Головна ідея: бот не питає користувача про теми. Він читає широку стрічку джерел і відправляє тільки події з реальною вагою: війни, ескалації, великі рішення держав, економічні шоки, серйозні технологічні події, катастрофи, а спорт лише коли це фінал, титульний бій, світовий скандал або подія глобального масштабу.
+`relevance_score` визначає, наскільки новина відповідає особистому профілю.
+`importance_score` не є глобальним фільтром: він лише допомагає ранжувати два
+релевантні матеріали з однаковим рівнем збігу. Підсумовування запускається після
+відбору, тому OpenAI не витрачає другий запит на відхилені новини.
+
+## Профіль і зразок промпту
+
+Робочий зразок лежить у `data/user_preferences.md`. У ньому окремо описані:
+
+- мета відбору;
+- теми `футбол`, `бокс`, `політика`;
+- правила `Цікавить` і `Не цікавить` для кожної теми;
+- вимога важливості саме для політичних новин;
+- поведінка при чутках, слабкому контексті, keyword-only збігах та невпевненості.
+
+Редагуй цей файл як звичайний Markdown. Після зміни тексту бот створить новий
+fingerprint профілю і повторно оцінить ще актуальні, але раніше відхилені RSS-
+матеріали. Уже надіслані посилання повторно не надсилаються.
+
+Альтернативно весь текст можна передати через `USER_NEWS_PREFERENCES`. Ця змінна
+має пріоритет над файлом, але для довгого профілю файл простіший і надійніший.
+
+## Структурований результат OpenAI
+
+Класифікатор використовує strict Structured Outputs і очікує для кожної новини:
+
+```json
+{
+  "id": "item_1",
+  "link": "https://example.com/news",
+  "is_relevant": true,
+  "relevance_score": 92,
+  "importance_score": 78,
+  "matched_topics": ["football"],
+  "category": "sports",
+  "event_type": "tournament_final",
+  "reason_uk": "Фінал великого турніру прямо відповідає профілю."
+}
+```
+
+Код додатково перевіряє діапазон score, повноту batch-відповіді, truncation,
+refusal та відповідність рішення реальному input ID. Пропущена або ненадійна
+відповідь відхиляється консервативно.
 
 ## Структура
 
 ```text
 .
-├── bot.py                 # постійний VPS-процес
-├── main.py                # ручний one-shot запуск
-├── rss.py                 # RSS fetch/normalize/deduplicate
-├── impact_ai.py           # OpenAI класифікація важливості
-├── ai.py                  # OpenAI заголовок і summary українською
-├── telegram.py            # відправка в Telegram
-├── news_state.py          # SQLite sent/processed state
-├── config.py              # env vars + завантаження source catalog
+├── bot.py                      # постійний цикл
+├── main.py                     # один ручний цикл
+├── preferences.py              # завантаження і fingerprint профілю
+├── relevance_ai.py             # персональний OpenAI-класифікатор
+├── ai.py                       # український заголовок і summary
+├── rss.py                      # RSS fetch/normalize/deduplicate
+├── news_state.py               # SQLite sent/processed + AI metadata
+├── news_dedup.py               # дедуплікація однієї події між джерелами
+├── telegram.py                 # Telegram sendPhoto/sendMessage
+├── config.py                   # env vars і каталог джерел
 ├── data/
-│   ├── rss_sources.json   # каталог RSS-джерел
-│   ├── newsbot.db         # runtime SQLite DB, створюється автоматично і не комітиться
-│   └── sent_news.json     # legacy import зі старої архітектури
+│   ├── user_preferences.md     # персональний prompt-профіль
+│   ├── rss_sources.json        # каталог RSS-джерел
+│   └── newsbot.db              # runtime SQLite, створюється автоматично
 └── tests/
 ```
 
 ## Налаштування
 
-Встанови залежності:
-
 ```bash
 pip install -r requirements.txt
 ```
 
-У `.env` потрібні мінімум:
+Мінімальний `.env`:
 
 ```text
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4o-mini
 ```
 
-Додаткові змінні:
+Основні додаткові змінні:
 
-- `NEWS_SOURCES_PATH` — шлях до каталогу RSS, default `data/rss_sources.json`;
-- `NEWS_STATE_DB_PATH` — SQLite database, default `data/newsbot.db`;
-- `SENT_NEWS_PATH` — legacy JSON для першого імпорту старої історії, default `data/sent_news.json`;
-- `PROCESSED_NEWS_PATH` — legacy JSON для першого імпорту старого processed-cache, default `data/processed_news.json`;
-- `NEWS_LOOKBACK_HOURS` — RSS-вікно, default `24`;
-- `NEWS_MIN_IMPACT_SCORE` — мінімальний impact score для відправки, default `75`;
-- `NEWS_MAX_CANDIDATES_PER_RUN` — максимум RSS-кандидатів, які OpenAI класифікує за один цикл; `0` означає без ліміту, default `36`;
-- `NEWS_MAX_ITEMS_PER_RUN` — максимум відправок за цикл; `0` означає без ліміту, default `0`;
-- `NEWS_POLL_INTERVAL_SECONDS` — пауза між циклами `bot.py`, default `300`;
-- `NEWS_STORY_DEDUPE_HOURS` — recent window for suppressing duplicate stories from different sources, default `36`;
-- `NEWS_STORY_DEDUPE_THRESHOLD` — similarity threshold for story-level duplicate detection, default `0.45`;
-- `OPENAI_IMPACT_BATCH_SIZE` — batch size для impact classification, default `6`;
-- `OPENAI_IMPACT_MAX_TOKENS` — max tokens для impact classification, default `5000`.
-- `OPENAI_IMPACT_RETRY_MISSING_LIMIT` — скільки пропущених OpenAI batch-рішень повторювати окремими запитами; default `0`.
-- `OPENAI_SUMMARY_BATCH_SIZE` — batch size для summary/title generation, default `4`.
+- `NEWS_PREFERENCES_PATH` — файл профілю, default `data/user_preferences.md`;
+- `USER_NEWS_PREFERENCES` — inline-профіль, має пріоритет над файлом;
+- `NEWS_MIN_RELEVANCE_SCORE` — мінімальний score збігу, default `70`;
+- `NEWS_MAX_CANDIDATES_PER_RUN` — максимум кандидатів на AI-відбір, default `36`;
+- `NEWS_MAX_ITEMS_PER_RUN` — максимум відправок за цикл, `0` без ліміту;
+- `OPENAI_RELEVANCE_BATCH_SIZE` — batch класифікації, default `6`;
+- `OPENAI_RELEVANCE_MAX_TOKENS` — output token limit, default `5000`;
+- `OPENAI_RELEVANCE_RETRY_MISSING_LIMIT` — окремі retry для пропущених рішень,
+  default `0`;
+- `OPENAI_SUMMARY_BATCH_SIZE` — batch підсумовування, default `4`;
+- `NEWS_LOOKBACK_HOURS` — вікно RSS, default `24`;
+- `NEWS_POLL_INTERVAL_SECONDS` — пауза `bot.py`, default `300`;
+- `NEWS_STATE_DB_PATH` — SQLite, default `data/newsbot.db`.
 
 ## Запуск
-
-Постійний VPS-режим:
 
 ```bash
 python bot.py
 ```
 
-Ручна перевірка одного циклу:
+Один цикл:
 
 ```bash
 python main.py
@@ -97,53 +138,26 @@ python main.py
 
 Очікувані логи:
 
-- `Fetching RSS source: ...` — бот читає RSS;
-- `Limiting AI impact candidates from ...` — бот обмежив великий backlog RSS-кандидатів для цього циклу;
-- `AI impact accepted (...)` — новина пройшла high-impact фільтр;
-- `AI impact rejected (...)` — новина визнана недостатньо важливою;
-- `OpenAI omitted ... retry is disabled...` — OpenAI не повернув частину batch-рішень, бот не робить дорогі retry й відхиляє їх консервативно;
-- `OpenAI omitted summary; using fallback summary...` — OpenAI не повернув summary для однієї важливої новини, бот використав fallback з оригінального title/description;
-- `Skipping duplicate story from ...` — story-level dedupe found that another source already covered the same event;
-- `No high-impact news items to send.` — новини були, але нічого достатньо важливого;
-- `Sent N high-impact news item(s).` — успішна відправка в `bot.py`.
+- `AI relevance accepted (...)` — новина пройшла персональний фільтр;
+- `AI relevance rejected (...)` — новина не відповідає профілю або threshold;
+- `OpenAI omitted ... relevance decision(s)` — batch був неповним;
+- `No news items matched the preference profile.` — збігів немає;
+- `Skipping duplicate story from ...` — подію вже покрило інше джерело;
+- `Sent N personalized news item(s).` — успішна відправка в постійному режимі.
 
 ## SQLite state
 
-SQLite тепер головне сховище стану. Таблиці:
+`sent_news` зберігає посилання, story fingerprint, profile key, relevance score,
+importance score, matched topics і коротку причину рішення. `processed_news`
+зберігає profile key, тому незмінний профіль не класифікує те саме повторно, а
+після редагування профілю актуальні відхилені новини можна переоцінити.
+Якщо встановлено ліміт відправок за цикл, релевантні матеріали понад ліміт не
+позначаються обробленими й залишаються на наступний цикл.
 
-- `sent_news` — лінки, які вже були відправлені; additionally stores `story_fingerprint` for duplicate-story suppression;
-- `processed_news` — лінки, які вже були класифіковані, але могли бути відхилені як low-impact.
-
-При першому запуску `news_state.py` автоматично імпортує старий `sent_news.json` / `processed_news.json`, якщо SQLite-таблиці ще порожні. Після цього JSON-файли більше не є основною пам’яттю бота.
-
-`data/newsbot.db` є runtime-файлом і ігнорується git. На VPS його потрібно берегти як локальний state: якщо видалити цей файл, бот втратить історію `sent_news` / `processed_news` після останнього імпорту legacy JSON.
+Стара база оновлюється автоматично через додавання нових колонок. Legacy JSON
+може бути імпортований під час першого відкриття порожньої бази.
 
 ## RSS-джерела
 
-Каталог лежить у `data/rss_sources.json`. Щоб вимкнути джерело, постав:
-
-```json
-{
-  "enabled": false
-}
-```
-
-Щоб додати нове:
-
-```json
-{
-  "name": "New Source",
-  "url": "https://example.com/rss.xml",
-  "category": "world",
-  "priority": "normal",
-  "enabled": true
-}
-```
-
-Якщо одне RSS-джерело зламається, бот залогує warning і продовжить роботу з іншими джерелами.
-
-## GitHub Actions fallback
-
-`.github/workflows/news.yml` лишається ручним fallback через `workflow_dispatch`. Основний runtime має бути VPS, бо тільки він дає часті перевірки й near-real-time відправку.
-
-Fallback запускає `main.py`, але не комітить SQLite state назад у репозиторій. Не тримай одночасно активними VPS-процес і регулярний GitHub Actions scheduler, інакше можливі дублікати або гонки стану.
+Каталог лежить у `data/rss_sources.json`. Поле `enabled: false` вимикає джерело.
+Якщо одне джерело недоступне, бот логує warning і продовжує з іншими.
