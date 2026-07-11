@@ -17,7 +17,7 @@ def limit_candidates(items: Iterable[NewsItem], max_candidates: int) -> list[New
         return item_list
 
     logger.info(
-        "Limiting AI impact candidates from %s to %s for this cycle.",
+        "Limiting AI relevance candidates from %s to %s for this cycle.",
         len(item_list),
         max_candidates,
     )

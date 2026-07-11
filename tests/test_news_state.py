@@ -3,16 +3,57 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import tempfile
 import unittest
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from news_state import NewsStateStore
+from relevance_ai import RelevanceDecision
 from rss import NewsItem
 
 
 class NewsStateTests(unittest.TestCase):
+    def test_existing_database_is_migrated_with_personalization_columns(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "newsbot.db"
+            connection = sqlite3.connect(db_path)
+            connection.execute(
+                """
+                CREATE TABLE sent_news (
+                    link TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL,
+                    sent_at TEXT NOT NULL, story_fingerprint TEXT
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE processed_news (
+                    link TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL,
+                    processed_at TEXT NOT NULL
+                )
+                """
+            )
+            connection.close()
+
+            store = NewsStateStore.load(db_path, retention_days=30)
+            try:
+                sent_columns = {
+                    row[1]
+                    for row in store.connection.execute("PRAGMA table_info(sent_news)")
+                }
+                processed_columns = {
+                    row[1]
+                    for row in store.connection.execute("PRAGMA table_info(processed_news)")
+                }
+
+                self.assertIn("relevance_score", sent_columns)
+                self.assertIn("decision_reason", sent_columns)
+                self.assertIn("profile_key", processed_columns)
+            finally:
+                store.close()
+
     def test_sent_and_processed_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = Path(temp_dir) / "newsbot.db"
@@ -50,6 +91,59 @@ class NewsStateTests(unittest.TestCase):
                 self.assertEqual(len(fingerprints), 1)
                 self.assertIn("vance", fingerprints[0])
                 self.assertIn("iran", fingerprints[0])
+            finally:
+                store.close()
+
+    def test_processed_state_is_scoped_to_preference_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "newsbot.db"
+            item = NewsItem("Title", "Text", "https://profile.test", None, "Source")
+            store = NewsStateStore.load(db_path, retention_days=30)
+            try:
+                store.mark_processed([item], profile_key="profile-a")
+
+                self.assertEqual(store.filter_unprocessed([item], profile_key="profile-a"), [])
+                self.assertEqual(
+                    store.filter_unprocessed([item], profile_key="profile-b"),
+                    [item],
+                )
+            finally:
+                store.close()
+
+    def test_sent_state_persists_relevance_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "newsbot.db"
+            item = NewsItem("Final", "Text", "https://metadata.test", None, "Source")
+            decision = RelevanceDecision(
+                item.link,
+                True,
+                92,
+                80,
+                ("football",),
+                "sports",
+                "final",
+                "Фінал великого турніру.",
+            )
+            store = NewsStateStore.load(db_path, retention_days=30)
+            try:
+                store.mark_sent(
+                    [item],
+                    decisions={item.link: decision},
+                    profile_key="profile-a",
+                )
+                row = store.connection.execute(
+                    """
+                    SELECT profile_key, relevance_score, importance_score,
+                           matched_topics, decision_reason
+                    FROM sent_news WHERE link = ?
+                    """,
+                    (item.link,),
+                ).fetchone()
+
+                self.assertEqual(row[0], "profile-a")
+                self.assertEqual(row[1:3], (92, 80))
+                self.assertEqual(json.loads(row[3]), ["football"])
+                self.assertIn("Фінал", row[4])
             finally:
                 store.close()
 

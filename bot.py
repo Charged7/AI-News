@@ -1,4 +1,4 @@
-"""Long-running VPS bot loop for near-real-time important news delivery."""
+"""Long-running VPS loop for near-real-time personalized news delivery."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from config import (
     NEWS_LOOKBACK_HOURS,
     NEWS_MAX_CANDIDATES_PER_RUN,
     NEWS_MAX_ITEMS_PER_RUN,
-    NEWS_MIN_IMPACT_SCORE,
+    NEWS_MIN_RELEVANCE_SCORE,
     NEWS_POLL_INTERVAL_SECONDS,
     NEWS_STATE_DB_PATH,
     RSS_SOURCES,
@@ -19,7 +19,6 @@ from config import (
     SENT_NEWS_RETENTION_DAYS,
     PROCESSED_NEWS_PATH,
 )
-from impact_ai import ImpactClassificationError, select_important_news
 from news_dedup import (
     NEWS_STORY_DEDUPE_HOURS,
     NEWS_STORY_DEDUPE_THRESHOLD,
@@ -28,6 +27,12 @@ from news_dedup import (
 )
 from news_pipeline import limit_candidates
 from news_state import NewsStateStore
+from preferences import PreferencesError, load_news_preferences, preferences_fingerprint
+from relevance_ai import (
+    RelevanceClassificationError,
+    RelevanceDecision,
+    select_relevant_news,
+)
 from rss import NewsItem, fetch_recent_news
 from telegram import TelegramClient
 
@@ -42,8 +47,10 @@ def configure_output() -> None:
 
 
 def run_news_cycle(client: TelegramClient | None = None) -> int:
-    """Fetch, classify, summarize, and send newly important items once."""
+    """Fetch, personalize, summarize, and send matching items once."""
     items = fetch_recent_news(RSS_SOURCES, lookback_hours=NEWS_LOOKBACK_HOURS)
+    preferences = load_news_preferences()
+    profile_key = preferences_fingerprint(preferences)
     state_store = NewsStateStore.load(
         NEWS_STATE_DB_PATH,
         SENT_NEWS_RETENTION_DAYS,
@@ -56,53 +63,72 @@ def run_news_cycle(client: TelegramClient | None = None) -> int:
             logger.info("No new news items to classify.")
             return 0
 
-        candidates = state_store.filter_unprocessed(candidates)
+        candidates = state_store.filter_unprocessed(candidates, profile_key=profile_key)
         if not candidates:
             logger.info("No new unclassified news items.")
             return 0
         candidates = limit_candidates(candidates, NEWS_MAX_CANDIDATES_PER_RUN)
 
-        important_items = select_important_news(
+        selection = select_relevant_news(
             candidates,
-            min_score=NEWS_MIN_IMPACT_SCORE,
+            preferences=preferences,
+            min_score=NEWS_MIN_RELEVANCE_SCORE,
             max_items=NEWS_MAX_ITEMS_PER_RUN,
         )
-        if not important_items:
-            state_store.mark_processed(candidates)
+        relevant_items = selection.items
+        if not relevant_items:
+            state_store.mark_processed(
+                selection.processed_candidates(candidates),
+                profile_key=profile_key,
+            )
             state_store.prune()
-            logger.info("No high-impact news items to send.")
+            logger.info("No news items matched the preference profile.")
             return 0
 
-        summaries = summarize_news_items(important_items)
+        summaries = summarize_news_items(relevant_items)
         deduplication = filter_duplicate_story_items(
-            important_items,
+            relevant_items,
             summaries,
             existing_fingerprints=state_store.recent_story_fingerprints(
                 hours=NEWS_STORY_DEDUPE_HOURS
             ),
             threshold=NEWS_STORY_DEDUPE_THRESHOLD,
         )
-        important_items = deduplication.unique_items
+        relevant_items = deduplication.unique_items
         for duplicate_item in deduplication.duplicate_items:
             logger.info("Skipping duplicate story from %s: %s", duplicate_item.source, duplicate_item.title)
 
-        if not important_items:
-            state_store.mark_processed(candidates)
+        if not relevant_items:
+            state_store.mark_processed(
+                selection.processed_candidates(candidates),
+                profile_key=profile_key,
+            )
             state_store.prune()
-            logger.info("No new high-impact stories to send after deduplication.")
+            logger.info("No new matching stories to send after deduplication.")
             return 0
 
         telegram_client = client or TelegramClient()
         sent_count = 0
 
-        for item in important_items:
-            _send_one_item(telegram_client, state_store, item, summaries[link_key(item.link)])
+        for item in relevant_items:
+            decision = selection.decisions[link_key(item.link)]
+            _send_one_item(
+                telegram_client,
+                state_store,
+                item,
+                summaries[link_key(item.link)],
+                decision,
+                profile_key,
+            )
             sent_count += 1
 
-        state_store.mark_processed(candidates)
+        state_store.mark_processed(
+            selection.processed_candidates(candidates),
+            profile_key=profile_key,
+        )
         state_store.prune()
 
-        logger.info("Sent %s high-impact news item(s).", sent_count)
+        logger.info("Sent %s personalized news item(s).", sent_count)
         return sent_count
     finally:
         state_store.close()
@@ -119,7 +145,7 @@ def run_forever(poll_interval_seconds: int = NEWS_POLL_INTERVAL_SECONDS) -> int:
     while True:
         try:
             run_news_cycle(client)
-        except (AISummaryError, ImpactClassificationError):
+        except (AISummaryError, PreferencesError, RelevanceClassificationError):
             logger.exception("AI processing failed; next cycle will retry.")
         except Exception:
             logger.exception("News cycle failed; next cycle will retry.")
@@ -132,10 +158,18 @@ def _send_one_item(
     state_store: NewsStateStore,
     item: NewsItem,
     summary: object,
+    decision: RelevanceDecision,
+    profile_key: str,
 ) -> None:
     """Send and persist one item immediately after successful delivery."""
     client.send_news_item(item, summary)
-    state_store.mark_sent([item], summaries={link_key(item.link): summary})
+    key = link_key(item.link)
+    state_store.mark_sent(
+        [item],
+        summaries={key: summary},
+        decisions={key: decision},
+        profile_key=profile_key,
+    )
     state_store.prune()
 
 
