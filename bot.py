@@ -1,4 +1,4 @@
-"""Long-running VPS loop for near-real-time personalized news delivery."""
+"""Optional local loop for near-real-time personalized news delivery."""
 
 from __future__ import annotations
 

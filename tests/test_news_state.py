@@ -58,9 +58,10 @@ class NewsStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = Path(temp_dir) / "newsbot.db"
             item = NewsItem("Title", "Text", "https://example.test", None, "Source")
+            now = datetime.now(UTC)
             store = NewsStateStore.load(db_path, retention_days=30)
-            store.mark_sent([item], now=datetime(2026, 6, 20, 10, 0, tzinfo=UTC))
-            store.mark_processed([item], now=datetime(2026, 6, 20, 10, 0, tzinfo=UTC))
+            store.mark_sent([item], now=now)
+            store.mark_processed([item], now=now)
             store.close()
 
             loaded = NewsStateStore.load(db_path, retention_days=30)
@@ -181,6 +182,7 @@ class NewsStateTests(unittest.TestCase):
             db_path = Path(temp_dir) / "newsbot.db"
             legacy_path = Path(temp_dir) / "sent_news.json"
             item = NewsItem("Title", "Text", "https://legacy.test", None, "Source")
+            now = datetime.now(UTC)
             legacy_path.write_text(
                 json.dumps(
                     {
@@ -189,7 +191,7 @@ class NewsStateTests(unittest.TestCase):
                                 "link": item.link,
                                 "title": item.title,
                                 "source": item.source,
-                                "sent_at": "2026-06-20T10:00:00+00:00",
+                                "sent_at": now.isoformat(),
                             }
                         ]
                     }
@@ -212,6 +214,7 @@ class NewsStateTests(unittest.TestCase):
             db_path = Path(temp_dir) / "newsbot.db"
             legacy_path = Path(temp_dir) / "processed_news.json"
             item = NewsItem("Title", "Text", "https://processed.test", None, "Source")
+            now = datetime.now(UTC)
             legacy_path.write_text(
                 json.dumps(
                     {
@@ -220,7 +223,7 @@ class NewsStateTests(unittest.TestCase):
                                 "link": item.link,
                                 "title": item.title,
                                 "source": item.source,
-                                "processed_at": "2026-06-20T10:00:00+00:00",
+                                "processed_at": now.isoformat(),
                             }
                         ]
                     }

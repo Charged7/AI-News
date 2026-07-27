@@ -1,0 +1,112 @@
+name: Hourly Personalized News
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    # Щогодини о 23-й хвилині. GitHub Actions може стартувати із затримкою.
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -p "test_*.py" -q
+
+  send-news:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: hourly-personalized-news
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Restore news state
+        id: restore-state
+        uses: actions/cache/restore@v5
+        with:
+          path: data/newsbot.db
+          key: newsbot-state-${{ github.run_id }}
+          restore-keys: |
+            newsbot-state-
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Validate required secrets
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          missing=0
+          for name in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID OPENAI_API_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository secret $name is not configured."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Send personalized news
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
+          OPENAI_SUMMARY_BATCH_SIZE: ${{ vars.OPENAI_SUMMARY_BATCH_SIZE || '4' }}
+          OPENAI_SUMMARY_MAX_TOKENS: ${{ vars.OPENAI_SUMMARY_MAX_TOKENS || '4000' }}
+          OPENAI_RELEVANCE_BATCH_SIZE: ${{ vars.OPENAI_RELEVANCE_BATCH_SIZE || '6' }}
+          OPENAI_RELEVANCE_MAX_TOKENS: ${{ vars.OPENAI_RELEVANCE_MAX_TOKENS || '5000' }}
+          OPENAI_RELEVANCE_RETRY_MISSING_LIMIT: ${{ vars.OPENAI_RELEVANCE_RETRY_MISSING_LIMIT || '0' }}
+          NEWS_LOOKBACK_HOURS: ${{ vars.NEWS_LOOKBACK_HOURS || '6' }}
+          NEWS_MIN_RELEVANCE_SCORE: ${{ vars.NEWS_MIN_RELEVANCE_SCORE || '70' }}
+          NEWS_MAX_CANDIDATES_PER_RUN: ${{ vars.NEWS_MAX_CANDIDATES_PER_RUN || '36' }}
+          NEWS_MAX_ITEMS_PER_RUN: ${{ vars.NEWS_MAX_ITEMS_PER_RUN || '5' }}
+          NEWS_STATE_DB_PATH: data/newsbot.db
+          SENT_NEWS_RETENTION_DAYS: ${{ vars.SENT_NEWS_RETENTION_DAYS || '30' }}
+        run: |
+          if [ ! -f data/newsbot.db ]; then
+            echo "::notice::No cached SQLite state found; using safe first-run limits."
+            export NEWS_LOOKBACK_HOURS=2
+            export NEWS_MAX_ITEMS_PER_RUN=3
+          fi
+          python main.py
+
+      - name: Save news state
+        if: ${{ always() && hashFiles('data/newsbot.db') != '' }}
+        uses: actions/cache/save@v5
+        with:
+          path: data/newsbot.db
+          key: newsbot-state-${{ github.run_id }}

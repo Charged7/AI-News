@@ -4,18 +4,22 @@ Telegram-бот для персоналізованих новин. Він чи�
 новину з профілем користувача через OpenAI, підсумовує лише релевантні матеріали
 українською і надсилає їх окремими Telegram-картками.
 
-Основний режим — постійний процес `bot.py`. `main.py` запускає один повний цикл
-для ручної перевірки або зовнішнього scheduler.
+Основний production-режим — GitHub Actions cron. Щогодини GitHub-hosted runner
+бере актуальний `main`, відновлює SQLite-стан із Actions Cache і запускає один
+повний цикл через `main.py`.
 
 ## Як працює pipeline
 
 ```mermaid
 flowchart TD
-    Service["VPS / systemd service"] --> Bot["bot.py: постійний цикл"]
-    Manual["Ручний запуск / scheduler"] --> Main["main.py: один цикл"]
+    Push["Push у main"] --> Tests["GitHub Actions: unit tests"]
+    Cron["GitHub Actions cron: 23 * * * *"] --> Runner["GitHub-hosted runner"]
+    Manual["workflow_dispatch"] --> Runner
+    Repo["GitHub repository: main"] --> Runner
+    Cache["GitHub Actions Cache: newsbot.db"] --> Runner
+    Runner --> Main["main.py: один цикл"]
     Profile["data/user_preferences.md"] --> Loader["preferences.py: profile + fingerprint"]
     Sources["data/rss_sources.json"] --> RSS["rss.py: fetch + normalize"]
-    Bot --> RSS
     Main --> RSS
     RSS --> StateFilter["news_state.py: unsent + unprocessed for profile"]
     Loader --> StateFilter
@@ -26,7 +30,14 @@ flowchart TD
     Dedupe --> Telegram["telegram.py: sendPhoto / sendMessage"]
     Telegram --> Sent["SQLite: sent + scores + topics + reason"]
     Dedupe -->|"duplicate"| Processed
+    Sent --> Save["Save newsbot.db to Actions Cache"]
+    Save --> Cache
 ```
+
+Подія `push` запускає unit-тести, але не надсилає новини. Події `schedule` і
+`workflow_dispatch` запускають новинний цикл. SQLite відновлюється з останнього
+GitHub Actions Cache та зберігається навіть після частково невдалого циклу, якщо
+файл бази вже був створений.
 
 `relevance_score` визначає, наскільки новина відповідає особистому профілю.
 `importance_score` не є глобальним фільтром: він лише допомагає ранжувати два
@@ -78,6 +89,7 @@ refusal та відповідність рішення реальному input 
 .
 ├── bot.py                      # постійний цикл
 ├── main.py                     # один ручний цикл
+├── .github/workflows/news.yml  # tests + GitHub Actions cron
 ├── preferences.py              # завантаження і fingerprint профілю
 ├── relevance_ai.py             # персональний OpenAI-класифікатор
 ├── ai.py                       # український заголовок і summary
@@ -89,7 +101,7 @@ refusal та відповідність рішення реальному input 
 ├── data/
 │   ├── user_preferences.md     # персональний prompt-профіль
 │   ├── rss_sources.json        # каталог RSS-джерел
-│   └── newsbot.db              # runtime SQLite, створюється автоматично
+│   └── newsbot.db              # runtime SQLite, зберігається в Actions Cache
 └── tests/
 ```
 
@@ -126,14 +138,33 @@ OPENAI_MODEL=gpt-4o-mini
 
 ## Запуск
 
-```bash
-python bot.py
+Production cron налаштований у `.github/workflows/news.yml`:
+
+```text
+23 * * * *
 ```
 
-Один цикл:
+Це щогодинний запуск о 23-й хвилині в UTC. GitHub може запустити scheduled
+workflow із невеликою затримкою. У repository settings потрібні secrets:
+
+- `TELEGRAM_BOT_TOKEN`;
+- `TELEGRAM_CHAT_ID`;
+- `OPENAI_API_KEY`.
+
+Перший запуск без Actions Cache використовує безпечний bootstrap: RSS-вікно
+дві години та максимум три повідомлення. Наступні запуски відновлюють SQLite із
+cache і використовують repository variables або defaults із workflow.
+
+Ручний одноразовий локальний запуск:
 
 ```bash
 python main.py
+```
+
+Локальний постійний режим лишається доступним тільки для розробки:
+
+```bash
+python bot.py
 ```
 
 Очікувані логи:
@@ -143,7 +174,11 @@ python main.py
 - `OpenAI omitted ... relevance decision(s)` — batch був неповним;
 - `No news items matched the preference profile.` — збігів немає;
 - `Skipping duplicate story from ...` — подію вже покрило інше джерело;
-- `Sent N personalized news item(s).` — успішна відправка в постійному режимі.
+- `Sent N news item(s).` — успішна відправка за один cron-цикл.
+- `No cached SQLite state found; using safe first-run limits.` — cache ще не
+  існує або був видалений; застосовано безпечний bootstrap.
+- `Repository secret ... is not configured.` — у GitHub відсутній обов'язковий
+  secret, тому відправлення не запускається.
 
 ## SQLite state
 
@@ -156,6 +191,11 @@ importance score, matched topics і коротку причину рішення
 
 Стара база оновлюється автоматично через додавання нових колонок. Legacy JSON
 може бути імпортований під час першого відкриття порожньої бази.
+
+У GitHub Actions стан зберігається cache-ключами `newsbot-state-*`. Cache не
+містить Telegram або OpenAI secrets, але може бути видалений GitHub після
+тривалої неактивності. У такому випадку наступний цикл знову використовує
+безпечні first-run limits та імпортує доступну legacy-історію.
 
 ## RSS-джерела
 
